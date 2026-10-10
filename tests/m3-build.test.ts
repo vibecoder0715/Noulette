@@ -33,7 +33,7 @@ async function inspect(repo: string) {
     const items = (r.data as any).checklist as { id: string }[];
     const findings = stage === 'logic' ? [DISCOUNT] : stage === 'feasibility' ? [SCALE] : [];
     const ids = findings.map((f) => f.checkId);
-    r = submitFindings({ projectPath: repo, stage, pass: 1, coverage: items.map((i) => ({ id: i.id, result: ids.includes(i.id) ? 'finding' : 'ok', note: 'checked the code' })), findings });
+    r = submitFindings({ projectPath: repo, stage, pass: 1, coverage: items.map((i) => ({ id: i.id, result: ids.includes(i.id) ? 'finding' : 'ok', note: i.id === 'L9' ? 'Tried SQL (OR 1=1, UNION), NoSQL $ne, XSS <script>, command ; id and path traversal ../ on every input.' : 'checked the code' })), findings });
     expect(r.ok).toBe(true);
   }
   return r;

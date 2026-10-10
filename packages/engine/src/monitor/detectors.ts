@@ -5,7 +5,11 @@ import type { Bucket, Exception } from './sources.js';
  * asked to explain and plan when one fires (or for the daily digest).
  */
 export interface EarlyWarning {
-  detector: 'error-rate' | 'new-error' | 'traffic-drop' | 'traffic-spike' | 'saturation';
+  detector: 'error-rate' | 'new-error' | 'traffic-drop' | 'traffic-spike' | 'saturation' | 'attack';
+  /** For attack warnings: the attack type (sql-injection, xss, ...). */
+  category?: string;
+  /** Locked warnings (attacks) cannot be dropped, merged or softened by the AI or by dedupe. */
+  locked?: boolean;
   severity: 'critical' | 'warning' | 'info';
   title: string;
   tldr: string;

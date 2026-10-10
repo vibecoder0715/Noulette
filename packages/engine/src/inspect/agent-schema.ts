@@ -63,6 +63,15 @@ export function validateSubmission(root: string, raw: unknown, items: CheckItem[
   for (const i of items) if (!covered.has(i.id)) errors.push(`coverage: missing result for ${i.id} (${i.check.slice(0, 60)}...)`);
   for (const c of v.coverage) if (!ids.has(c.id)) errors.push(`coverage: unknown check id ${c.id}`);
   for (const c of v.coverage) if (c.result === 'finding' && !v.findings.some((f) => f.checkId === c.id)) errors.push(`coverage ${c.id}: marked "finding" but no finding has checkId ${c.id}`);
+  // The attacker check can never be waved through: no "not-applicable", and "ok" must show the work.
+  const atk = v.coverage.find((c) => c.id === 'L9');
+  if (atk && ids.has('L9')) {
+    if (atk.result === 'not-applicable') errors.push('coverage L9: "not-applicable" is not allowed for the attacker check. Test every input and report "ok" with what you tried, or "finding".');
+    if (atk.result === 'ok') {
+      const tried = [/sql|union|or\s*'?1'?\s*=\s*'?1/i, /xss|<script|onerror|script/i, /command|whoami|;\s*id|\$\(/i, /travers|\.\.\/|etc\/passwd|path/i, /nosql|\$ne|\$gt/i].filter((re) => re.test(atk.note)).length;
+      if (tried < 4 || atk.note.length < 60) errors.push('coverage L9: "ok" needs a note naming at least 4 payload types you tried (SQL, NoSQL, XSS, command, path traversal) and which inputs you covered.');
+    }
+  }
   v.findings.forEach((f, idx) => {
     const at = `findings[${idx}]`;
     if (!ids.has(f.checkId)) errors.push(`${at}.checkId: ${f.checkId} is not in this stage's checklist`);

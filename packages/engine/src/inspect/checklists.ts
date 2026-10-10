@@ -33,6 +33,7 @@ export function checklist(stage: AiStage, plan: QA[], ctx: { liveApp: boolean; a
     add('L6', 'Act as an anonymous visitor: login, sign-up and password reset. Any account enumeration, reusable or guessable tokens?');
     add('L7', 'Are server-side checks present for every rule that the UI enforces (limits, ownership, validation)?');
     add('L8', 'After logout, delete or role change, do old sessions/tokens/links still work?');
+    add('L9', `Act as an attacker against EVERY input (query strings, form/JSON bodies, headers, file names, search, login): SQL injection (' OR '1'='1, UNION SELECT, ; DROP), NoSQL operators ({"$ne":null}), XSS (<script>, onerror=), command injection (; id, $(whoami)), path traversal (../../etc/passwd). ${ctx.liveApp ? 'Send the payloads with noulette_probe and report any SQL/stack error, extra rows, login success or reflected script.' : 'Trace each input to the database, shell, file system and HTML output.'} Every input that reaches a query, command, path or page without parameterization/escaping is a finding, even if no exploit was confirmed. The note must name the payload types you tried and the inputs you covered. "not-applicable" is not allowed.`);
   } else if (stage === 'feasibility') {
     add('F1', `Can the current stack, database and hosting handle ${users ? users.toLocaleString('en-US') + ' users (from PLAN.md)' : 'the expected user count (ask: PLAN.md has no number)'}? Report underbuild.`);
     add('F2', 'Is the setup heavier or more expensive than that user count needs? Report overbuild.');

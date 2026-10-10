@@ -231,12 +231,29 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
 
   const saveSecret = (name: string, value: string) => api('/api/secrets', { name, value });
   async function saveInspector() {
-    await save({ inspector: { posthog: { host: ph.host.trim(), projectId: ph.projectId.trim() }, ga4: { propertyId: ga.propertyId.trim() } } });
-    if (ph.key) await saveSecret('posthogKey', ph.key);
-    if (ga.sa) await saveSecret('ga4ServiceAccount', ga.sa);
-    setPh({ ...ph, key: '' });
-    setGa({ ...ga, sa: '' });
+    setTest(null);
+    try {
+      const r: any = await api('/api/settings', { inspector: { posthog: { host: ph.host.trim(), projectId: ph.projectId.trim() }, ga4: { propertyId: ga.propertyId.trim() } } });
+      // The engine cleans up pasted links and region shortcuts; show the stored values.
+      setPh((p) => ({ ...p, host: r.inspector.posthog.host, projectId: r.inspector.posthog.projectId }));
+      if (ph.key) await saveSecret('posthogKey', ph.key);
+      if (ga.sa) await saveSecret('ga4ServiceAccount', ga.sa);
+      setPh((p) => ({ ...p, key: '' }));
+      setGa((g) => ({ ...g, sa: '' }));
+      setTest({ kind: 'ok', text: 'Inspector settings saved.' });
+    } catch (e: any) {
+      setTest({ kind: 'error', text: e.message });
+    }
     refresh();
+  }
+  async function testPostHog() {
+    setTest({ kind: 'info', text: 'Reading the last hour from PostHog...' });
+    try {
+      const r = await api('/api/monitor/test-posthog', {});
+      setTest({ kind: 'ok', text: `PostHog works: ${r.events} events from ${r.users} users in the last hour.` });
+    } catch (e: any) {
+      setTest({ kind: 'error', text: e.message });
+    }
   }
   async function saveAi() {
     await save({ ai: { configText: ai.configText, baseUrl: ai.baseUrl.trim(), model: ai.model.trim(), dialect: ai.dialect } });
@@ -303,7 +320,7 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
             </div>
             <div className="field" style={{ marginTop: 10 }}>
               <label htmlFor="ph-host">PostHog address</label>
-              <input id="ph-host" type="url" value={ph.host} onChange={(e) => setPh({ ...ph, host: e.target.value })} placeholder="https://us.posthog.com" />
+              <input id="ph-host" type="text" value={ph.host} onChange={(e) => setPh({ ...ph, host: e.target.value })} placeholder="https://us.posthog.com (or eu, self-hosted, or paste any PostHog page link)" />
             </div>
             <div className="field">
               <label htmlFor="ph-project">Project ID</label>
@@ -312,7 +329,7 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
             <div className="field">
               <label htmlFor="ph-key">Personal API key {sec.posthogKey !== 'none' && `(${sec.posthogKey === 'env' ? 'set by environment variable' : 'saved'})`}</label>
               <input id="ph-key" type="password" autoComplete="off" value={ph.key} onChange={(e) => setPh({ ...ph, key: e.target.value })} placeholder={sec.posthogKey !== 'none' ? 'Leave empty to keep the saved key' : 'phx_...'} />
-              <span className="hint">Needs read access to "Query". Or set NOULETTE_POSTHOG_KEY. Stored encrypted for your Windows account.</span>
+              <span className="hint">A personal API key (starts with phx_) with the "Query: Read" scope, from PostHog &gt; Settings &gt; Personal API keys. The project token (phc_) cannot read data. Or set NOULETTE_POSTHOG_KEY. Stored encrypted for your Windows account.</span>
             </div>
           </fieldset>
           <fieldset style={{ border: 0, marginTop: 6 }}>
@@ -335,7 +352,11 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
               <textarea id="ga-sa" value={ga.sa} onChange={(e) => setGa({ ...ga, sa: e.target.value })} placeholder='{"type": "service_account", ...}' style={{ minHeight: 70 }} />
             </div>
           </fieldset>
-          <button className="btn-clay" onClick={saveInspector} id="save-inspector">Save inspector settings</button>
+          <div className="inline">
+            <button className="btn-clay" onClick={saveInspector} id="save-inspector">Save inspector settings</button>
+            <button className="btn-outlined" onClick={testPostHog} id="test-posthog">Test PostHog</button>
+          </div>
+          {test && <div style={{ marginTop: 12 }}><Banner kind={test.kind}>{test.text}</Banner></div>}
 
           <h4 className="section-title">AI for log analysis</h4>
           <p className="panel-desc">Works with OpenAI-compatible services (Grafilab, OpenRouter, Groq, Ollama, LM Studio and more), Anthropic (Claude or any Anthropic-compatible host), Google Gemini and Azure OpenAI. Paste a configuration, fill in the basic fields, or both. Noulette tries the pasted configuration first, then the basic fields.</p>

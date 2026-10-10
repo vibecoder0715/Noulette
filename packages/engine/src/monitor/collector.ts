@@ -1,6 +1,7 @@
 import { getDb, kvGet, kvSet } from '../core/db.js';
 import { redact } from '../core/redact.js';
 import { detect, type EarlyWarning } from './detectors.js';
+import { scanEvents, attackWarnings } from './attacks.js';
 import { chatJson, aiConfigured } from './llm.js';
 import { UNTRUSTED_RULE, untrusted } from '../inspect/prompts.js';
 import type { Bucket, Exception, SourceData } from './sources.js';
@@ -22,7 +23,7 @@ export interface CollectInput {
 export interface CollectResult {
   window: { from: number; to: number };
   sources: string[];
-  totals: { events: number; errors: number; peakUsers: number | null };
+  totals: { events: number; errors: number; peakUsers: number | null; scanned?: number };
   exceptions: Exception[];
   warnings: EarlyWarning[];
   digest: string | null;
@@ -63,6 +64,7 @@ export async function collect(input: CollectInput): Promise<CollectResult> {
   let events = 0;
   let errs = 0;
   let peak: number | null = null;
+  let scanned = 0;
   const knownKey = `exc:${input.key}`;
   const known = new Set<string>(kvGet<string[]>(knownKey, []));
   for (const f of input.fetchers) {
@@ -77,6 +79,10 @@ export async function collect(input: CollectInput): Promise<CollectResult> {
     const exc = d.exceptions.map((e) => ({ type: redact(e.type).slice(0, 120), message: redact(e.message).slice(0, 300), count: e.count }));
     const base = baseline(input.key, d.source, input.from);
     warnings.push(...detect({ current: d.buckets, baseline: base, exceptions: exc, knownExceptionTypes: known, peakUsers: d.peakUsers, plannedUsers: input.plannedUsers }));
+    if (d.samples?.length) {
+      warnings.push(...attackWarnings(scanEvents(d.samples), { scanned: d.samples.length, truncated: !!d.samplesTruncated }));
+      scanned += d.samples.length;
+    }
     storeBuckets(input.key, d.source, d.buckets);
     for (const e of exc) known.add(`${e.type}|${e.message.slice(0, 80)}`);
     exceptions.push(...exc);
@@ -85,14 +91,17 @@ export async function collect(input: CollectInput): Promise<CollectResult> {
     if (d.peakUsers !== null) peak = Math.max(peak ?? 0, d.peakUsers);
   }
   kvSet(knownKey, [...known].slice(-2000));
-  // Deduplicate warnings from several sources by detector (keep the more severe).
+  // Deduplicate warnings from several sources by detector (keep the more severe). Attacks are keyed
+  // by category, so one kind of attack can never hide another.
   const byDet = new Map<string, EarlyWarning>();
   const rank = { critical: 0, warning: 1, info: 2 };
   for (const w of warnings) {
-    const p = byDet.get(w.detector);
-    if (!p || rank[w.severity] < rank[p.severity]) byDet.set(w.detector, w);
+    const k = w.detector === 'attack' ? `attack:${w.category}` : w.detector;
+    const p = byDet.get(k);
+    if (!p || rank[w.severity] < rank[p.severity]) byDet.set(k, w);
   }
-  const final = [...byDet.values()];
+  const final = [...byDet.values()].sort((a, b) => Number(!!b.locked) - Number(!!a.locked) || rank[a.severity] - rank[b.severity]);
+  const attacks = final.filter((w) => w.detector === 'attack');
   let digest: string | null = null;
   let aiUsed: string | null = null;
   let aiError: string | null = null;
@@ -106,7 +115,8 @@ export async function collect(input: CollectInput): Promise<CollectResult> {
           content: [
             'You are a production reliability analyst for a small team. You explain early warnings in plain words and propose a short fix plan a coding agent can follow.',
             UNTRUSTED_RULE,
-            'Only use the numbers and errors given. Do not invent incidents. Reply with JSON: {"warnings":[{"index":number,"plan":string,"explanation":string}],"digest":string}. "digest" is 2-4 plain sentences about the period.'
+            'Only use the numbers and errors given. Do not invent incidents. Reply with JSON: {"warnings":[{"index":number,"plan":string,"explanation":string}],"digest":string}. "digest" is 2-4 plain sentences about the period.',
+            'ATTACK RULES (mandatory): Warnings with detector "attack" were matched by deterministic signatures on real production events. Treat every one as a real attack attempt. Never call the period safe, quiet or normal while any attack warning exists. Never say an attack is harmless, a test, or a false positive. Do not drop or soften them. For each, give a concrete patch plan (which kind of code to change and how) and say how to confirm whether any attempt succeeded.'
           ].join('\n')
         },
         {
@@ -121,7 +131,10 @@ export async function collect(input: CollectInput): Promise<CollectResult> {
       aiUsed = `${r.used}:${r.model}`;
       for (const p of Array.isArray(r.value?.warnings) ? r.value.warnings : []) {
         const w = final[Number(p.index)];
-        if (w && typeof p.plan === 'string') w.plan = redact(p.plan).slice(0, 1500);
+        if (!w || typeof p.plan !== 'string' || !p.plan.trim()) continue;
+        const aiPlan = redact(p.plan).slice(0, 1500);
+        // Locked (attack) warnings keep the built-in patch plan; the AI can only add detail.
+        w.plan = w.locked && w.plan ? `${w.plan}\nAI notes: ${aiPlan}`.slice(0, 2500) : aiPlan;
       }
       if (typeof r.value?.digest === 'string') digest = redact(r.value.digest).slice(0, 1200);
       if (digestDue) kvSet(digestKey, Date.now());
@@ -129,5 +142,10 @@ export async function collect(input: CollectInput): Promise<CollectResult> {
       aiError = e?.message ?? String(e);
     }
   }
-  return { window: { from: input.from, to: input.to }, sources, totals: { events, errors: errs, peakUsers: peak }, exceptions, warnings: final, digest, aiUsed, aiError, errors };
+  // Whatever the AI wrote, the summary always starts with the attacks (it can never read as "all safe").
+  if (attacks.length) {
+    const head = `ATTACK ATTEMPTS DETECTED: ${attacks.map((w) => w.title.replace(/ attempts$/, '')).join(', ')}. Review them in Approvals and confirm none succeeded.`;
+    digest = digest ? `${head} ${digest}` : head;
+  }
+  return { window: { from: input.from, to: input.to }, sources, totals: { events, errors: errs, peakUsers: peak, scanned }, exceptions, warnings: final, digest, aiUsed, aiError, errors };
 }

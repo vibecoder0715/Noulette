@@ -57,7 +57,11 @@ export async function runMonitor(opts: { now?: number; forceDigest?: boolean } =
   const s = getSettings();
   if (!s.productionAnalysis) return { ok: false, message: 'Production analysis is turned off.' };
   const project = activeProject();
-  if (!project) return { ok: false, message: 'Add a project on Home first.' };
+  if (!project) {
+    const msg = 'No project yet: run an inspection once from your coding agent so Noulette knows which app to watch.';
+    reportError(msg);
+    return { ok: false, message: msg };
+  }
   if (running) return { ok: false, message: 'A check is already running.' };
   running = true;
   const st = getMonitorStatus();
@@ -81,7 +85,12 @@ export async function runMonitor(opts: { now?: number; forceDigest?: boolean } =
         summary: r.warnings.map((w) => w.title).join(', '),
         data: { warnings: r.warnings, window: r.window, sources: r.sources }
       });
-      const crit = r.warnings.filter((w) => w.severity === 'critical');
+      // Every attack type gets its own alert (never folded into one, never silent), whatever its severity.
+      const attacks = r.warnings.filter((w) => w.detector === 'attack');
+      for (const w of attacks) {
+        notify({ project: project.path, severity: 'critical', kind: 'early-warning', sticky: true, title: `Attack on ${project.name}: ${w.title}`, body: `${w.tldr} A patch plan is waiting in Approvals. Approve it, then ask your coding agent to "fix the approved production plans" (it uses noulette_log_plans).`, alert: true, data: { approvalId }, dedupeKey: `${projectKey(project.path)}:attack:${w.category}` });
+      }
+      const crit = r.warnings.filter((w) => w.severity === 'critical' && w.detector !== 'attack');
       if (crit.length) notify({ project: project.path, severity: 'critical', kind: 'early-warning', title: `Production: ${crit[0].title}`, body: crit[0].tldr, alert: true, data: { approvalId }, dedupeKey: `${projectKey(project.path)}:${crit[0].detector}` });
     }
     if (r.sources.length) appendLogs(project.path, r, approvalId);
@@ -90,7 +99,10 @@ export async function runMonitor(opts: { now?: number; forceDigest?: boolean } =
     kvSet(STATUS_KEY, { lastRunAt: now, lastWindowEnd: ok ? now : st.lastWindowEnd, lastError: problems.length ? problems.join(' | ') : null, nextRunAt: now + intervalMs, lastWarnings: r.warnings.length });
     if (problems.length) reportError(problems.join(' | '));
     else resolveByKind('monitor-error', 'monitor');
-    const message = !ok ? `Could not read production data: ${problems.join(' | ')}` : `Checked ${r.totals.events} events. ${r.warnings.length ? `${r.warnings.length} early warning(s) in Approvals.` : 'No early warnings.'}${problems.length ? ` Problems: ${problems.join(' | ')}` : ''}`;
+    const attackCount = r.warnings.filter((w) => w.detector === 'attack').length;
+    const message = !ok
+      ? `Could not read production data: ${problems.join(' | ')}`
+      : `Checked ${r.totals.events} events${r.totals.scanned !== undefined ? ` (${r.totals.scanned} scanned for attacks)` : ''}. ${attackCount ? `${attackCount} kind(s) of attack attempt found. ` : ''}${r.warnings.length ? `${r.warnings.length} early warning(s) in Approvals.` : 'No early warnings.'}${problems.length ? ` Problems: ${problems.join(' | ')}` : ''}`;
     return { ok: ok && !problems.length, message, result: r, approvalId };
   } catch (e: any) {
     const msg = e?.message ?? String(e);
@@ -130,6 +142,15 @@ settingsFilters.push((body) => {
 });
 
 route('POST', '/api/monitor/run', async () => runMonitor({ forceDigest: true }));
+route('POST', '/api/monitor/test-posthog', async () => {
+  const now = Date.now();
+  try {
+    const d = await fetchPostHog(now - 3600_000, now);
+    return { ok: true, events: d.buckets.reduce((a, b) => a + b.events, 0), users: d.peakUsers ?? 0 };
+  } catch (e: any) {
+    throw new HttpError(400, e.message);
+  }
+});
 route('POST', '/api/monitor/test-ai', async () => {
   try {
     return await testAi();

@@ -25,15 +25,26 @@ export function appendLogs(root: string, r: CollectResult, approvalId: string | 
     lines.push('- Top errors:');
     for (const e of r.exceptions.slice(0, 8)) lines.push(`  - ${e.count}x ${e.type}: ${e.message.replace(/\r?\n/g, ' ').slice(0, 160)}`);
   }
-  if (r.warnings.length) {
+  if (r.totals.scanned !== undefined) lines.push(`- Attack scan: ${r.totals.scanned} events checked against injection, XSS, traversal, command, SSRF, XXE, JNDI, scanner and brute-force signatures.`);
+  const attacks = r.warnings.filter((w) => w.detector === 'attack');
+  if (attacks.length) {
+    lines.push('', '### Attack attempts (never auto-dismissed)', '');
+    for (const w of attacks) {
+      lines.push(`- **${w.title}** (${w.severity}, ${w.category}, confidence ${Math.round(w.confidence * 100)}%): ${w.tldr}`);
+      for (const ev of w.evidence) lines.push(`  - Evidence: ${ev.replace(/\r?\n/g, ' ')}`);
+      if (w.plan) lines.push(`  - Patch plan: ${w.plan.replace(/\r?\n/g, ' ')}`);
+    }
+  }
+  const others = r.warnings.filter((w) => w.detector !== 'attack');
+  if (others.length) {
     lines.push('', '### Early warnings', '');
-    for (const w of r.warnings) {
+    for (const w of others) {
       lines.push(`- **${w.title}** (${w.severity}, confidence ${Math.round(w.confidence * 100)}%): ${w.tldr}`);
       for (const ev of w.evidence) lines.push(`  - Evidence: ${ev}`);
       if (w.plan) lines.push(`  - Plan: ${w.plan.replace(/\r?\n/g, ' ')}`);
     }
-    lines.push('', approvalId ? `Status: waiting for approval in Noulette (${approvalId}). Plans from these notes are never fixed automatically.` : '');
-  } else lines.push('- No early warnings.');
+  } else if (!attacks.length) lines.push('- No early warnings.');
+  if (r.warnings.length) lines.push('', approvalId ? `Status: waiting for approval in Noulette (${approvalId}). Plans from these notes are never fixed automatically.` : '');
   if (r.digest) lines.push('', `Summary: ${r.digest}`);
   if (r.aiError) lines.push('', `AI analysis failed: ${r.aiError}`);
   fs.writeFileSync(f, existing.replace(/\s*$/, '\n\n') + lines.join('\n') + '\n');

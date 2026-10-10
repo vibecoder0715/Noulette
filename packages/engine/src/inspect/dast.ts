@@ -143,6 +143,47 @@ export async function runDast(root: string, spec: StartSpec | null): Promise<{ f
   }
   const err = await get("/%27%22%3C%3E__noulette_probe__%00");
   if (err && STACK_RE.test(err.body)) add('exposure', 'live.stack-trace', 'medium', 'Error details shown to visitors', err.body.match(STACK_RE)![0].slice(0, 200), 'Show a generic error page and log details on the server.');
+  // Active injection probes: harmless payloads in common parameters; error-based detection only
+  // (nothing is written or deleted). Any database or shell error in the reply is a finding.
+  const SQL_ERR = /(SQLITE_ERROR|SQLiteException|sqlite3\.OperationalError|syntax error at or near|You have an error in your SQL syntax|unterminated quoted string|unrecognized token|SQLSTATE\[|ORA-\d{5}|Microsoft OLE DB|ODBC SQL Server Driver|PG::SyntaxError|psycopg2\.|MySqlException|near ".*": syntax error|Incorrect syntax near|quoted string not properly terminated)/i;
+  const paths = ['/', '/search', '/api/search', '/api/products', '/api/items', '/api/users', '/products', '/items', '/login', '/api/login'];
+  const params = ['id', 'q', 'search', 'name', 'category', 'user', 'email'];
+  const payloads = ["'", "1' OR '1'='1", '1"', "1) OR (1=1", "';--"];
+  let sqlHit: string | null = null;
+  outer: for (const p of paths) {
+    for (const k of params) {
+      for (const pl of payloads) {
+        const r = await get(`${p}?${k}=${encodeURIComponent(pl)}`);
+        if (r && SQL_ERR.test(r.body)) {
+          sqlHit = `GET ${p}?${k}=${pl} -> ${r.status}: ${r.body.match(SQL_ERR)![0]}`;
+          break outer;
+        }
+      }
+    }
+  }
+  if (!sqlHit) {
+    for (const p of ['/login', '/api/login', '/api/auth/login', '/auth/login']) {
+      try {
+        const r = await probe({ url: base + p, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: "admin' --", email: "a@b.c' OR '1'='1", password: "' OR '1'='1" }) });
+        if (SQL_ERR.test(r.body)) {
+          sqlHit = `POST ${p} with a quote in the login fields -> ${r.status}: ${r.body.match(SQL_ERR)![0]}`;
+          break;
+        }
+      } catch {}
+    }
+  }
+  if (sqlHit) add('database', 'live.sql-error', 'critical', 'Database command injection (confirmed live)', sqlHit, 'Use parameterized queries for this input (and every other query built from user input); never join user text into SQL. Return generic errors.');
+  const xss = '<script>noulette_xss_probe()</script>';
+  for (const p of ['/search', '/', '/api/search']) {
+    const r = await get(`${p}?q=${encodeURIComponent(xss)}`);
+    if (r && r.body.includes(xss) && /html/i.test(r.headers['content-type'] ?? '')) {
+      add('xss', 'live.reflected-xss', 'high', 'Page injection (confirmed live)', `GET ${p}?q=<script>... is reflected unescaped in HTML`, 'Escape user input in HTML output (use the template engine\'s default escaping) and add a Content-Security-Policy.');
+      break;
+    }
+  }
+  const trav = await get('/static/..%2f..%2f..%2f..%2fetc%2fpasswd');
+  const trav2 = trav && /root:.*:0:0:/.test(trav.body) ? trav : await get('/files?name=..%2f..%2f..%2f..%2fetc%2fpasswd');
+  if (trav2 && /root:.*:0:0:|\[fonts\]|\[extensions\]/.test(trav2.body)) add('path', 'live.path-traversal', 'critical', 'File access flaw (confirmed live)', 'A ../ path returned a system file', 'Resolve file paths against a fixed folder and refuse anything outside it.');
   const cors = await get('/', { Origin: 'http://evil.example' });
   if (cors && cors.headers['access-control-allow-origin'] === 'http://evil.example' && cors.headers['access-control-allow-credentials'] === 'true') add('cors', 'live.cors-reflect', 'high', '', 'Origin http://evil.example reflected with credentials', 'Only allow your own front-end origins.');
   return { findings, tested: true, port: spec.port, status: { name: 'live-test', ok: true, ran: true, findings: findings.length, note: started.reused ? 'used the app already running on that port' : undefined, ms: Date.now() - t0 } };

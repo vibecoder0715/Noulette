@@ -10,6 +10,7 @@ import { inspectPrompt, buildPrompt, repoInstructionSnippet } from '../inspect/p
 import { mergeCommands } from '../build/build.js';
 import { VERSION } from '../version.js';
 import { localKey } from '../core/signing.js';
+import { posthogKeyProblem, normalizePostHog } from '../monitor/sources.js';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -106,6 +107,14 @@ route('POST', '/api/settings', ({ body }) => {
   const before = getSettings();
   const extras: Record<string, unknown> = {};
   for (const f of settingsFilters) Object.assign(extras, f(body) ?? {});
+  // Store the PostHog address and project ID in their clean form (pasted links, "us", ingestion hosts...).
+  const ph = body?.inspector?.posthog;
+  if (ph && (typeof ph.host === 'string' || typeof ph.projectId === 'string')) {
+    const cur = before.inspector.posthog;
+    const n = normalizePostHog(ph.host ?? cur.host, ph.projectId ?? cur.projectId);
+    if (typeof ph.host === 'string') ph.host = n.host;
+    ph.projectId = n.projectId;
+  }
   let next;
   try {
     next = updateSettings(body ?? {});
@@ -124,6 +133,8 @@ route('POST', '/api/secrets', ({ body }) => {
   if (!SECRETS.includes(name)) throw new HttpError(400, 'Unknown secret');
   const value = typeof body?.value === 'string' ? body.value.trim() : '';
   if (value.length > 20_000) throw new HttpError(400, 'Value too long');
+  const problem = name === 'posthogKey' && value ? posthogKeyProblem(value) : null;
+  if (problem) throw new HttpError(400, problem);
   setSecret(name, value || null);
   return { name, present: hasSecret(name) };
 });

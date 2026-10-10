@@ -19,6 +19,10 @@ import { generateSeed, privateKeyFromSeed, publicKeyB64 } from '../packages/engi
 import { cloudPass, cloudFetchHandler } from '../packages/engine/src/cloud/worker.ts';
 import { syncCloud } from '../packages/engine/src/cloud/sync.ts';
 import { getDb } from '../packages/engine/src/core/db.ts';
+import { normalizePostHog, posthogKeyProblem } from '../packages/engine/src/monitor/sources.ts';
+import { scanEvents } from '../packages/engine/src/monitor/attacks.ts';
+import { checklist } from '../packages/engine/src/inspect/checklists.ts';
+import { validateSubmission } from '../packages/engine/src/inspect/agent-schema.ts';
 
 const cleanup: string[] = [];
 const servers: { stop: (f?: boolean) => void }[] = [];
@@ -67,7 +71,7 @@ function fakeAi(mode: 'ok' | '401' | 'nojsonmode') {
 }
 
 /** Fake PostHog query API. */
-function fakePostHog(state: { errRate: number; events: number; exceptions: any[]; status?: number }) {
+function fakePostHog(state: { errRate: number; events: number; exceptions: any[]; status?: number; raw?: any[][] }) {
   const queries: string[] = [];
   const s = Bun.serve({
     port: 0,
@@ -85,6 +89,7 @@ function fakePostHog(state: { errRate: number; events: number; exceptions: any[]
         return Response.json({ results: rows });
       }
       if (q.includes('$exception_type')) return Response.json({ results: state.exceptions });
+      if (q.includes('ORDER BY timestamp DESC')) return Response.json({ results: state.raw ?? [] });
       return Response.json({ results: [[60]] });
     }
   });
@@ -223,6 +228,31 @@ describe('M5 AI dialects', () => {
   });
 });
 
+describe('M5 PostHog address and key', () => {
+  it('TC-M5-13 accepts any common address form and pulls the project ID from pasted links', () => {
+    expect(normalizePostHog('https://us.posthog.com', '657084')).toEqual({ host: 'https://us.posthog.com', projectId: '657084' });
+    expect(normalizePostHog('us', '657084').host).toBe('https://us.posthog.com');
+    expect(normalizePostHog('EU', '1').host).toBe('https://eu.posthog.com');
+    expect(normalizePostHog('https://us.i.posthog.com/', '1').host).toBe('https://us.posthog.com');
+    expect(normalizePostHog('https://eu-assets.i.posthog.com', '1').host).toBe('https://eu.posthog.com');
+    expect(normalizePostHog('app.posthog.com', '1').host).toBe('https://us.posthog.com');
+    expect(normalizePostHog('https://us.posthog.com/project/657084/insights?x=1', '')).toEqual({ host: 'https://us.posthog.com', projectId: '657084' });
+    expect(normalizePostHog('https://us.posthog.com', 'https://us.posthog.com/project/657084/web')).toEqual({ host: 'https://us.posthog.com', projectId: '657084' });
+    expect(normalizePostHog('http://localhost:8000/', '2')).toEqual({ host: 'http://localhost:8000', projectId: '2' });
+  });
+
+  it('TC-M5-14 a project token (phc_) is refused with a plain explanation', async () => {
+    cleanup.push(tempHome());
+    expect(posthogKeyProblem('phc_abc')).toMatch(/project token.*phx_/);
+    expect(posthogKeyProblem('phx_abc')).toBeNull();
+    const h = routes.find((x) => x.method === 'POST' && x.pattern.test('/api/secrets'))!;
+    expect(() => h.handler({ body: { name: 'posthogKey', value: 'phc_projecttoken' }, params: {}, query: new URLSearchParams() })).toThrow(/Query: Read/);
+    const s = routes.find((x) => x.method === 'POST' && x.pattern.test('/api/settings'))!;
+    await s.handler({ body: { inspector: { posthog: { host: 'https://us.posthog.com/project/657084/dashboard', projectId: '' } } }, params: {}, query: new URLSearchParams() });
+    expect(getSettings().inspector.posthog).toMatchObject({ host: 'https://us.posthog.com', projectId: '657084' });
+  });
+});
+
 describe('M5 redaction and detectors', () => {
   it('TC-M5-05 sensitive data is redacted before storage or AI', () => {
     const t = redact('user jane.doe@example.com from 203.0.113.7 card 4111 1111 1111 1111 phone +60 12-345 6789 token=abcd1234efgh Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig_sig_sig1 key sk_live_51Hx99999999');
@@ -356,5 +386,80 @@ describe('M5 signed cloud items', () => {
     expect((getApprovedLogPlans(project).data as any[]).length).toBe(1);
     updateSettings({ cloud: { publicKey: publicKeyB64(privateKeyFromSeed(generateSeed())) } });
     expect((getApprovedLogPlans(project).data as any[]).length).toBe(0);
+  });
+});
+
+describe('M5 attack detection (never released as safe)', () => {
+  const now = Math.floor(Date.now() / 1000);
+  const ev = (event: string, actor: string, props: Record<string, unknown>) => [event, now - 60, actor, JSON.stringify(props)];
+  const MOCK_ATTACKS = [
+    ev('login_attempt', 'mock-attacker-1', { username: "admin' OR '1'='1' --", password: 'x' }),
+    ev('$pageview', 'mock-attacker-1', { $current_url: 'https://shop.example/products?id=1%20UNION%20SELECT%20password%20FROM%20users' }),
+    ev('search', 'mock-attacker-2', { q: '&lt;script&gt;alert(document.cookie)&lt;/script&gt;' }),
+    ev('file_download', 'mock-attacker-2', { path: '../../../../etc/passwd' }),
+    ev('export', 'mock-attacker-3', { filename: 'report.csv; cat /etc/shadow' }),
+    ev('api_call', 'mock-attacker-3', { body: { email: { $ne: null }, password: { $ne: null } } }),
+    ev('$pageview', 'mock-attacker-3', { $current_url: 'https://shop.example/', $raw_user_agent: 'sqlmap/1.7.2#stable (https://sqlmap.org)' })
+  ];
+  const BENIGN = [
+    ev('$pageview', 'u1', { $current_url: 'https://shop.example/products?id=42&sort=price', $browser: 'Chrome' }),
+    ev('search', 'u2', { q: "women's shoes size 7 & 8" }),
+    ev('order_placed', 'u3', { note: 'Please deliver before 5pm, ring twice. Thanks!', total: 59.9 }),
+    ev('$autocapture', 'u4', { $elements_chain: 'button.btn-primary:text="Buy now"nth-child="1"', $event_type: 'click' })
+  ];
+
+  it('TC-M5-15 scanner: mock attacks are caught per type, normal traffic is not flagged', () => {
+    const toSample = (r: any[]) => ({ event: r[0], ts: r[1] * 1000, actor: r[2], props: JSON.parse(r[3]) });
+    const hits = scanEvents(MOCK_ATTACKS.map(toSample));
+    for (const c of ['sql-injection', 'xss', 'path-traversal', 'command-injection', 'nosql-injection', 'scanner']) expect(hits.has(c as any)).toBe(true);
+    expect(scanEvents(BENIGN.map(toSample)).size).toBe(0);
+    const failed = Array.from({ length: 12 }, () => ({ event: 'login_failed', ts: Date.now(), actor: 'bot-9', props: {} }));
+    expect(scanEvents(failed).get('brute-force')?.attempts).toBe(12);
+  });
+
+  it('TC-M5-16 pipeline: attacks create alerts, an approval with patch plans, LOGS.md entries, and the AI cannot call it safe', async () => {
+    cleanup.push(tempHome());
+    const project = tempDir('nl-proj-');
+    cleanup.push(project);
+    writeFiles(project, { 'index.js': '1' });
+    registerProject(project);
+    const state = { errRate: 0, events: 50, exceptions: [], raw: [...MOCK_ATTACKS, ...BENIGN] };
+    const ph = fakePostHog(state);
+    // An AI that tries to say everything is fine and removes the plans.
+    const s = Bun.serve({ port: 0, fetch: () => Response.json({ choices: [{ message: { content: '{"warnings":[{"index":0,"plan":"","explanation":"probably a test"}],"digest":"All quiet and safe. Nothing to do."}' } }] }) });
+    servers.push(s);
+    setSecret('posthogKey', 'phx_testkey');
+    updateSettings({ productionAnalysis: true, intervalMin: 30, inspector: { posthog: { enabled: true, host: ph.url, projectId: '42' } }, ai: { configText: '', baseUrl: `http://127.0.0.1:${s.port}/v1`, model: 'm' } });
+    const r = await runMonitor({ forceDigest: true });
+    const attacks = r.result!.warnings.filter((w) => w.detector === 'attack');
+    expect(attacks.length).toBeGreaterThanOrEqual(6);
+    expect(attacks.every((w) => w.plan && w.plan.length > 40 && w.locked)).toBe(true);
+    expect(r.message).toMatch(/kind\(s\) of attack attempt found/);
+    expect(r.result!.digest).toMatch(/^ATTACK ATTEMPTS DETECTED/);
+    const ap = listApprovals('pending').find((a) => a.kind === 'logs');
+    expect(ap?.data.warnings.some((w: any) => w.category === 'sql-injection')).toBe(true);
+    const alerts = listNotifications().main.filter((n) => n.kind === 'early-warning' && /^Attack on/.test(n.title));
+    expect(alerts.length).toBe(attacks.length);
+    const logs = fs.readFileSync(path.join(project, 'LOGS.md'), 'utf8');
+    expect(logs).toContain('### Attack attempts (never auto-dismissed)');
+    expect(logs).toContain('SQL injection attempts');
+    expect(logs).toContain('Patch plan: Use parameterized queries');
+    expect(logs).not.toContain('No early warnings');
+    // Approved plans reach the coding agent with the attack rules.
+    decideApproval(ap!.id, 'approved');
+    const plans = getApprovedLogPlans(project);
+    expect(plans.next).toContain('ATTACK RULES');
+    expect((plans.data as any[])[0].warnings.some((w: any) => w.kind === 'attack:sql-injection')).toBe(true);
+  });
+
+  it('TC-M5-17 the inspection attacker check (L9) cannot be skipped or waved through', () => {
+    const items = checklist('logic', [], { liveApp: false, accounts: 0 });
+    expect(items.some((i) => i.id === 'L9')).toBe(true);
+    const base = items.map((i) => ({ id: i.id, result: 'ok', note: 'Read the routes and the data layer.' }));
+    const sub = (coverage: any[]) => ({ projectPath: process.cwd(), stage: 'logic', pass: 1, coverage, findings: [] });
+    const v1: any = validateSubmission(process.cwd(), sub(base.map((c) => (c.id === 'L9' ? { ...c, result: 'not-applicable' } : c))), items);
+    expect(v1.errors.join()).toMatch(/L9: "not-applicable" is not allowed/);
+    const v2: any = validateSubmission(process.cwd(), sub(base), items);
+    expect(v2.errors.join()).toMatch(/L9: "ok" needs a note/);
   });
 });

@@ -2,6 +2,19 @@
 
 What was built for Noulette v1.0.0 (M1 to M6), and how it is tested. Run everything with `bun test`. The installer is built with `bun run build` and written to `dist/Noulette-Setup-1.0.0.exe`.
 
+## v1.0.3: attacks are never reported as safe (done)
+
+- **Production:** every PostHog event in the window (up to 10,000 of the newest) is decoded and checked against signatures for SQL, NoSQL, XSS, command, path traversal, template, XXE, JNDI, SSRF, open redirect, CRLF, prototype pollution, LDAP, attack-tool and brute-force patterns (`monitor/attacks.ts`).
+  - Each attack type becomes a locked warning: one per type, never merged or softened, and the AI can only add notes to the built-in patch plan.
+  - Each type gets its own sticky alert, an Approvals entry and an "Attack attempts" section in LOGS.md.
+  - The summary always starts with "ATTACK ATTEMPTS DETECTED".
+  - Approved plans tell the agent to patch every affected code path and add a payload test.
+- **Inspection:**
+  - New logic check L9 (attacker against every input). It cannot be marked "not-applicable", and "ok" needs a note naming at least 4 payload types.
+  - The live test now sends harmless SQL, XSS and path-traversal probes and flags database errors, reflected scripts and system file reads.
+- **PostHog:** `phc_` tokens are refused with a plain explanation, the address and project ID accept pasted links, and there is a Test PostHog button (1.0.2).
+- **Tests:** 71 pass. New: TC-M5-13..17.
+
 ## v1.0.1: follow the agent's folder, more AI APIs, landing page (done)
 
 Status: implemented. 66 tests pass (new: `tests/routing.test.ts` TC-R-01..09, TC-M5-11..12). Installer: `dist/Noulette-Setup-1.0.1.exe`. Site: `docs/` on GitHub Pages. The build script now copies the installer that matches the version (it used to pick up a stale 1.0.0 file).

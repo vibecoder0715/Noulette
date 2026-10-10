@@ -35,7 +35,11 @@ const ANSWERS = [
 
 /** A coverage list answering every checklist item. */
 function cover(items: { id: string }[], findingIds: string[] = []) {
-  return items.map((i) => ({ id: i.id, result: findingIds.includes(i.id) ? 'finding' : 'ok', note: 'Read the routes and the data layer.' }));
+  return items.map((i) => ({
+    id: i.id,
+    result: findingIds.includes(i.id) ? 'finding' : 'ok',
+    note: i.id === 'L9' ? 'Tried SQL (OR 1=1, UNION), NoSQL $ne, XSS <script>, command ; id, path traversal ../ on every route input and the login form.' : 'Read the routes and the data layer.'
+  }));
 }
 
 describe('M2 intake and PLAN.md', () => {
@@ -167,7 +171,7 @@ describe('M2 strict agent output', () => {
       ['logic without file', (s) => ((s.findings[0].file = null), (s.findings[0].line = null), (s.findings[0].evidence = null)), /must cite file/],
       ['unknown label', (s) => (s.findings[0].label = 'scary'), /label/],
       ['extra field', (s) => (s.findings[0].sneaky = true), /Unrecognized|unrecognized/],
-      ['finding without checkId match', (s) => (s.findings[0].checkId = 'L9'), /not in this stage/],
+      ['finding without checkId match', (s) => (s.findings[0].checkId = 'L99'), /not in this stage/],
       ['marked finding but none given', (s) => (s.findings = []), /marked "finding"/]
     ];
     for (const [name, mutate, re] of cases) {
