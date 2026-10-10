@@ -1,0 +1,37 @@
+[
+  {
+    "id": "tricky-agent-hook",
+    "verdict": "UNSURE",
+    "ruleId": "AGT-001",
+    "userLabel": "true positive",
+    "spawnCount": 0
+  },
+  {
+    "id": "tricky-polyglot-macro",
+    "verdict": "UNSURE",
+    "ruleId": "PAY-008",
+    "userLabel": "true positive",
+    "spawnCount": 0
+  },
+  {
+    "id": "tricky-unicode-bidi",
+    "verdict": "REJECT",
+    "ruleId": "INJ-004",
+    "userLabel": "true positive",
+    "spawnCount": 0
+  },
+  {
+    "id": "tricky-husky-benign",
+    "verdict": "PASS",
+    "ruleId": "LIF-001",
+    "userLabel": "false positive",
+    "spawnCount": 0
+  },
+  {
+    "id": "tricky-obfuscated-src",
+    "verdict": "PASS",
+    "ruleId": "PAY-003",
+    "userLabel": "unclear",
+    "spawnCount": 0
+  }
+]

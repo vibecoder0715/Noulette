@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "risks": [
+    {
+      "id": "LLM01",
+      "name": "Prompt Injection",
+      "category": "owasp-llm-top-10",
+      "status": "checked-by-rule",
+      "ruleIds": ["INJ-001", "INJ-002", "INJ-003", "INJ-004"]
+    },
+    {
+      "id": "LLM02",
+      "name": "Sensitive Information Disclosure",
+      "category": "owasp-llm-top-10",
+      "status": "checked-by-rule",
+      "ruleIds": ["KEY-001", "KEY-002", "EXP-001", "EXP-002"]
+    },
+    {
+      "id": "LLM03",
+      "name": "Supply Chain Vulnerabilities",
+      "category": "owasp-llm-top-10",
+      "status": "checked-by-rule",
+      "ruleIds": ["DEP-001", "DEP-003", "DEP-005"]
+    },
+    {
+      "id": "LLM04",
+      "name": "Data and Model Poisoning",
+      "category": "owasp-llm-top-10",
+      "status": "not-covered",
+      "ruleIds": []
+    },
+    {
+      "id": "LLM05",
+      "name": "Improper Output Handling",
+      "category": "owasp-llm-top-10",
+      "status": "checked-by-rule",
+      "ruleIds": ["AI-OUT-001"]
+    },
+    {
+      "id": "LLM06",
+      "name": "Excessive Agency",
+      "category": "owasp-llm-top-10",
+      "status": "reviewed-with-evidence",
+      "ruleIds": ["AGT-003"]
+    },
+    {
+      "id": "LLM07",
+      "name": "System Prompt Leakage",
+      "category": "owasp-llm-top-10",
+      "status": "checked-by-rule",
+      "ruleIds": ["INJ-001"]
+    },
+    {
+      "id": "LLM08",
+      "name": "Vector and Embedding Weaknesses",
+      "category": "owasp-llm-top-10",
+      "status": "not-covered",
+      "ruleIds": []
+    },
+    {
+      "id": "LLM09",
+      "name": "Misinformation",
+      "category": "owasp-llm-top-10",
+      "status": "not-covered",
+      "ruleIds": []
+    },
+    {
+      "id": "LLM10",
+      "name": "Unbounded Consumption",
+      "category": "owasp-llm-top-10",
+      "status": "checked-by-rule",
+      "ruleIds": ["AI-COST-001"]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+    <rect width="120" height="120" rx="14" fill="#FFFFFF"/>
+    <g transform="translate(60, 46) scale(0.95)">
+      <!-- Official Cline Robot Head & Visor -->
+      <rect x="-24" y="-22" width="48" height="42" rx="12" fill="#0F172A"/>
+      <rect x="-18" y="-12" width="36" height="18" rx="7" fill="#00A3FF"/>
+      <!-- Glowing Robot Eyes -->
+      <circle cx="-9" cy="-3" r="3.5" fill="#FFFFFF"/>
+      <circle cx="9" cy="-3" r="3.5" fill="#FFFFFF"/>
+      <!-- Head Antenna -->
+      <rect x="-2.5" y="-28" width="5" height="7" rx="2" fill="#0F172A"/>
+      <circle cx="0" cy="-30" r="3.5" fill="#00A3FF"/>
+      <!-- Body Neck Connection -->
+      <rect x="-10" y="20" width="20" height="4" rx="2" fill="#0F172A"/>
+    </g>
+    <text x="60" y="96" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" text-anchor="middle" fill="#18181B" letter-spacing="1">CLINE</text>
+  </svg>

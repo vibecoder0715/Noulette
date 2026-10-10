@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" width="760" height="380">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Container Box -->
+  <rect width="760" height="380" rx="14" fill="url(#bgGrad)" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Window Header -->
+  <rect x="0" y="0" width="760" height="42" rx="14" fill="#0A0F1D"/>
+  <rect x="0" y="28" width="760" height="14" fill="#0A0F1D"/>
+  <line x1="0" y1="42" x2="760" y2="42" stroke="#1E293B" stroke-width="1"/>
+  <circle cx="22" cy="21" r="5.5" fill="#EF4444"/>
+  <circle cx="38" cy="21" r="5.5" fill="#F59E0B"/>
+  <circle cx="54" cy="21" r="5.5" fill="#10B981"/>
+  <text x="380" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="#94A3B8" text-anchor="middle">Noulette MCP Engine (Background Daemon · Sidecar Active)</text>
+
+  <!-- Node 1: Desktop Application Shell -->
+  <rect x="36" y="70" width="190" height="260" rx="10" fill="url(#cardGrad)" stroke="#38BDF8" stroke-width="1.5"/>
+  <rect x="36" y="70" width="190" height="34" rx="10" fill="#0369A1"/>
+  <rect x="36" y="94" width="190" height="10" fill="#0369A1"/>
+  <text x="131" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#FFFFFF" text-anchor="middle">Noulette Desktop</text>
+  <circle cx="56" cy="130" r="12" fill="#0284C7"/>
+  <text x="56" y="135" font-family="-apple-system, sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">N</text>
+  <text x="76" y="134" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">Main Process</text>
+  <rect x="52" y="156" width="158" height="24" rx="4" fill="#0F172A" stroke="#1E293B"/>
+  <text x="62" y="172" font-family="monospace" font-size="10.5" fill="#38BDF8">port: 5173 / tauri</text>
+  <rect x="52" y="190" width="158" height="24" rx="4" fill="#0F172A" stroke="#1E293B"/>
+  <text x="62" y="206" font-family="monospace" font-size="10.5" fill="#4ADE80">status: READY (0.1.0)</text>
+  <rect x="52" y="224" width="158" height="24" rx="4" fill="#0F172A" stroke="#1E293B"/>
+  <text x="62" y="240" font-family="monospace" font-size="10.5" fill="#CBD5E1">keys: ed25519 sealed</text>
+  <rect x="52" y="260" width="158" height="48" rx="6" fill="#0369A1" opacity="0.2"/>
+  <text x="131" y="282" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#38BDF8" text-anchor="middle">Zero Configuration</text>
+  <text x="131" y="298" font-family="-apple-system, sans-serif" font-size="10" fill="#94A3B8" text-anchor="middle">Launch &amp; ready</text>
+
+  <!-- Flow 1: Connecting line to MCP Server -->
+  <line x1="226" y1="200" x2="284" y2="200" stroke="#38BDF8" stroke-width="2.5" stroke-dasharray="6 3"/>
+  <polygon points="284,196 294,200 284,204" fill="#38BDF8"/>
+
+  <!-- Node 2: Background MCP Server -->
+  <rect x="294" y="70" width="190" height="260" rx="10" fill="url(#cardGrad)" stroke="#10B981" stroke-width="1.5"/>
+  <rect x="294" y="70" width="190" height="34" rx="10" fill="#047857"/>
+  <rect x="294" y="94" width="190" height="10" fill="#047857"/>
+  <text x="389" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#FFFFFF" text-anchor="middle">Background MCP Daemon</text>
+  <circle cx="314" cy="130" r="12" fill="#059669"/>
+  <text x="314" y="135" font-family="-apple-system, sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle">M</text>
+  <text x="334" y="134" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">MCP Tools &amp; Pipe</text>
+  <rect x="310" y="156" width="158" height="24" rx="4" fill="#0F172A" stroke="#1E293B"/>
+  <text x="320" y="172" font-family="monospace" font-size="10.5" fill="#10B981">noulette_scan</text>
+  <rect x="310" y="190" width="158" height="24" rx="4" fill="#0F172A" stroke="#1E293B"/>
+  <text x="320" y="206" font-family="monospace" font-size="10.5" fill="#10B981">noulette_plan</text>
+  <rect x="310" y="224" width="158" height="24" rx="4" fill="#0F172A" stroke="#1E293B"/>
+  <text x="320" y="240" font-family="monospace" font-size="10.5" fill="#10B981">noulette_verify_fix</text>
+  <rect x="310" y="260" width="158" height="48" rx="6" fill="#047857" opacity="0.2"/>
+  <text x="389" y="282" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#34D399" text-anchor="middle">Active Engine Sidecar</text>
+  <text x="389" y="298" font-family="-apple-system, sans-serif" font-size="10" fill="#94A3B8" text-anchor="middle">IPC stdin/stdout pipe</text>
+
+  <!-- Flow 2: Connecting line to Coding Agents -->
+  <line x1="484" y1="200" x2="542" y2="200" stroke="#10B981" stroke-width="2.5" stroke-dasharray="6 3"/>
+  <polygon points="542,196 552,200 542,204" fill="#10B981"/>
+
+  <!-- Node 3: Connected AI Coding Tools -->
+  <rect x="552" y="70" width="176" height="260" rx="10" fill="url(#cardGrad)" stroke="#A855F7" stroke-width="1.5"/>
+  <rect x="552" y="70" width="176" height="34" rx="10" fill="#7E22CE"/>
+  <rect x="552" y="94" width="176" height="10" fill="#7E22CE"/>
+  <text x="640" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#FFFFFF" text-anchor="middle">Your AI Coding Tools</text>
+  
+  <rect x="568" y="120" width="144" height="28" rx="6" fill="#1E1B4B" stroke="#4338CA"/>
+  <text x="640" y="138" font-family="-apple-system, sans-serif" font-size="11.5" font-weight="700" fill="#C7D2FE" text-anchor="middle">Claude Code</text>
+  
+  <rect x="568" y="156" width="144" height="28" rx="6" fill="#1E1B4B" stroke="#4338CA"/>
+  <text x="640" y="174" font-family="-apple-system, sans-serif" font-size="11.5" font-weight="700" fill="#C7D2FE" text-anchor="middle">Antigravity / Cursor</text>
+  
+  <rect x="568" y="192" width="144" height="28" rx="6" fill="#1E1B4B" stroke="#4338CA"/>
+  <text x="640" y="210" font-family="-apple-system, sans-serif" font-size="11.5" font-weight="700" fill="#C7D2FE" text-anchor="middle">Cline / OpenCode</text>
+
+  <rect x="568" y="228" width="144" height="28" rx="6" fill="#1E1B4B" stroke="#4338CA"/>
+  <text x="640" y="246" font-family="-apple-system, sans-serif" font-size="11.5" font-weight="700" fill="#C7D2FE" text-anchor="middle">Codex / Gemini</text>
+
+  <rect x="568" y="268" width="144" height="44" rx="6" fill="#6B21A8" opacity="0.3"/>
+  <text x="640" y="287" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#E9D5FF" text-anchor="middle">Automatic Handshake</text>
+  <text x="640" y="302" font-family="-apple-system, sans-serif" font-size="9.5" fill="#D8B4FE" text-anchor="middle">Real-time verification</text>
+</svg>

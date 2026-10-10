@@ -1,0 +1,17 @@
+[package]
+name = "noulette-desktop"
+version = "0.1.0"
+description = "Noulette Desktop Application"
+authors = ["Noulette Team"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+sha2 = "0.10"
+regex = "1.10"

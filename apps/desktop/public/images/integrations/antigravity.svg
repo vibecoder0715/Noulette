@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+    <rect width="120" height="120" rx="14" fill="#FFFFFF"/>
+    <g transform="translate(60, 48)">
+      <!-- Google 4-Color Antigravity Prismatic Mark -->
+      <path d="M 0 -24 L 20 0 L 0 24 L -20 0 Z" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+      <path d="M 0 -22 L 18 0 L 0 0 Z" fill="#4285F4"/>
+      <path d="M 18 0 L 0 22 L 0 0 Z" fill="#EA4335"/>
+      <path d="M 0 22 L -18 0 L 0 0 Z" fill="#FBBC05"/>
+      <path d="M -18 0 L 0 -22 L 0 0 Z" fill="#34A853"/>
+      <circle cx="0" cy="0" r="6" fill="#FFFFFF"/>
+      <circle cx="0" cy="0" r="3.5" fill="#1E293B"/>
+    </g>
+    <text x="60" y="96" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="800" text-anchor="middle" fill="#18181B" letter-spacing="0.5">ANTIGRAVITY</text>
+  </svg>

@@ -1,0 +1,17 @@
+{
+  "name": "@noulette/engine",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "noulette-engine": "src/cli/index.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  }
+}
