@@ -4,7 +4,8 @@ Finds problems in your app before it ships, and keeps watching it after launch.
 
 ## 1. Download
 
-**[Download Noulette for Windows (Noulette-Setup-1.0.0.exe)](https://example.com/noulette/releases/latest/Noulette-Setup-1.0.0.exe)** (placeholder link until the release host is chosen)
+**[Download Noulette for Windows (Noulette-Setup-1.0.0.exe)](https://github.com/vibecoder0715/Noulette/releases/download/v1.0.0/Noulette-Setup-1.0.0.exe)**  
+*(Direct link from [GitHub Releases](https://github.com/vibecoder0715/Noulette/releases/tag/v1.0.0) | SHA-256: `318b48305188c7bafffe18697e9c2d10aecf590cc684cc7237dfd74980de4528`)*
 
 One installer for everything: the desktop app, the MCP server your coding agent talks to, and the bundled scanners. Windows 10/11 x64, installs for the current user, no admin rights or extra runtimes needed.
 
