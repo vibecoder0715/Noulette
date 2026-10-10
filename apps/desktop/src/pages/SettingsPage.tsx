@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Volume2, Play, Sparkles, Plug, Activity, ShieldCheck, Wrench, Gauge, FolderPlus, FolderOpen } from 'lucide-react';
-import { api, invoke, isTauri, pickFolder, type AppState } from '../api.js';
+import { Volume2, Play, Sparkles, Plug, Activity, ShieldCheck, Wrench, Gauge } from 'lucide-react';
+import { api, invoke, isTauri, type AppState } from '../api.js';
 import { Banner, CopyButton, Toggle } from '../components/ui.js';
 import { playNotificationSound, subscribeToSoundState } from '../util/sound.js';
 import type { Page } from '../components/Sidebar.js';
@@ -39,9 +39,10 @@ export function SettingsPage({ state, refresh }: Props) {
   const [prompts, setPrompts] = useState<any>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error' | 'warn'; text: string } | null>(null);
 
+  // Prompts are the same for every repo: the agent's open folder decides the project.
   useEffect(() => {
-    api('/api/prompts' + (state.active ? '?project=' + encodeURIComponent(state.active) : '')).then(setPrompts).catch(() => {});
-  }, [state.active]);
+    api('/api/prompts').then(setPrompts).catch(() => {});
+  }, []);
 
   async function save(patch: Record<string, unknown>) {
     setMsg(null);
@@ -55,22 +56,10 @@ export function SettingsPage({ state, refresh }: Props) {
     }
   }
 
-  async function addSnippet() {
-    if (!state.active) return;
-    try {
-      const r = await api('/api/projects/snippet', { path: state.active });
-      setMsg({ kind: 'ok', text: `Added the BUILD instructions to ${r.file}` });
-    } catch (e: any) {
-      setMsg({ kind: 'error', text: e.message });
-    }
-  }
-
   return (
     <div className="page-container" id="settings-page">
       <h1 className="page-title">Settings</h1>
       {msg && <Banner kind={msg.kind}>{msg.text}</Banner>}
-
-      <ProjectPanel state={state} refresh={refresh} />
 
       {/* 1. Prompts */}
       <div style={{ marginBottom: 28 }} id="settings-prompts">
@@ -78,7 +67,7 @@ export function SettingsPage({ state, refresh }: Props) {
           <Sparkles {...iconProps} />
           <h3 style={{ fontSize: 19, fontWeight: 800 }}>Prompts</h3>
         </div>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.5 }}>Copy a prompt and paste it into your coding agent.</p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.5 }}>Copy a prompt and paste it into your coding agent. Noulette checks the folder your agent has open.</p>
         <div className="stack">
           <PromptRow id="prompt-inspect" title="Inspect mode" desc="Finds problems and decides what needs fixing. Asks you a few questions first." text={prompts?.inspect} />
           <PromptRow id="prompt-build" title="Build mode" desc='Fixes the approved problems. You can also just type "BUILD" in your agent.' text={prompts?.build} />
@@ -86,11 +75,10 @@ export function SettingsPage({ state, refresh }: Props) {
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 14, alignItems: 'center' }}>
               <div>
                 <strong>Make "BUILD" work in every agent</strong>
-                <p>Adds a short instruction block to AGENTS.md in your project.</p>
+                <p>Paste this short block into AGENTS.md (or CLAUDE.md) in your project.</p>
               </div>
               <div className="inline" style={{ flexShrink: 0 }}>
                 {prompts && <CopyButton text={prompts.snippet} label="Copy snippet" variant="outlined" />}
-                <button className="btn-clay" style={{ padding: '7px 14px', fontSize: 13 }} onClick={addSnippet} disabled={!state.active}>Add to my project</button>
               </div>
             </div>
           </div>
@@ -137,57 +125,6 @@ export function SettingsPage({ state, refresh }: Props) {
       <ProductionSection state={state} save={save} refresh={refresh} />
       <GuardSection state={state} save={save} />
       <AdvancedSection state={state} save={save} />
-    </div>
-  );
-}
-
-function ProjectPanel({ state, refresh }: { state: AppState; refresh: () => void }) {
-  const [adding, setAdding] = useState(false);
-  const [path, setPath] = useState('');
-  const [err, setErr] = useState<string | null>(null);
-  async function add(p: string) {
-    setErr(null);
-    try {
-      await api('/api/projects', { path: p });
-      setAdding(false);
-      setPath('');
-      refresh();
-    } catch (e: any) {
-      setErr(e.message);
-    }
-  }
-  async function onAdd() {
-    if (isTauri) {
-      const p = await pickFolder();
-      if (p) await add(p);
-    } else setAdding(true);
-  }
-  return (
-    <div className="panel" id="settings-project">
-      <PanelHead icon={<FolderOpen {...iconProps} />} title="Project" desc="The app folder Noulette checks. The prompts below are filled in with this path." />
-      <div className="inline">
-        {state.projects.length === 0 ? (
-          <span className="text-secondary" style={{ flex: 1 }}>No project yet. Add the folder of the app you are building.</span>
-        ) : (
-          <>
-            <label htmlFor="project-select" className="sr-only">Active project</label>
-            <select id="project-select" className="input" style={{ flex: 1, minWidth: 260 }} value={state.active ?? ''} onChange={(e) => api('/api/projects/active', { path: e.target.value }).then(refresh)}>
-              {state.projects.map((p) => (
-                <option key={p.path} value={p.path}>{p.name} ({p.path})</option>
-              ))}
-            </select>
-          </>
-        )}
-        <button className="btn-outlined" onClick={onAdd} id="add-project"><FolderPlus size={16} /> Add folder</button>
-      </div>
-      {adding && (
-        <form className="inline" style={{ marginTop: 10 }} onSubmit={(e) => (e.preventDefault(), add(path))}>
-          <label htmlFor="new-path" className="sr-only">Folder path</label>
-          <input id="new-path" className="input" style={{ flex: 1 }} type="text" placeholder="C:\Users\you\my-app" value={path} onChange={(e) => setPath(e.target.value)} />
-          <button className="btn-clay" type="submit">Add</button>
-        </form>
-      )}
-      {err && <div style={{ marginTop: 10 }}><Banner kind="error">{err}</Banner></div>}
     </div>
   );
 }
@@ -286,7 +223,7 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
   const sec = state.secrets;
   const [ph, setPh] = useState({ host: s.inspector.posthog.host, projectId: s.inspector.posthog.projectId, key: '' });
   const [ga, setGa] = useState({ propertyId: s.inspector.ga4.propertyId, sa: '' });
-  const [ai, setAi] = useState({ configText: s.ai.configText, baseUrl: s.ai.baseUrl, model: s.ai.model, key: '' });
+  const [ai, setAi] = useState({ configText: s.ai.configText, baseUrl: s.ai.baseUrl, model: s.ai.model, dialect: (s.ai as any).dialect ?? 'auto', key: '' });
   const [test, setTest] = useState<{ kind: 'ok' | 'error' | 'info'; text: string } | null>(null);
   const off = !s.productionAnalysis;
   const mon = state.monitor;
@@ -302,7 +239,7 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
     refresh();
   }
   async function saveAi() {
-    await save({ ai: { configText: ai.configText, baseUrl: ai.baseUrl.trim(), model: ai.model.trim() } });
+    await save({ ai: { configText: ai.configText, baseUrl: ai.baseUrl.trim(), model: ai.model.trim(), dialect: ai.dialect } });
     if (ai.key) await saveSecret('aiApiKey', ai.key);
     setAi({ ...ai, key: '' });
     refresh();
@@ -401,11 +338,21 @@ function ProductionSection({ state, save, refresh }: { state: AppState; save: (p
           <button className="btn-clay" onClick={saveInspector} id="save-inspector">Save inspector settings</button>
 
           <h4 className="section-title">AI for log analysis</h4>
-          <p className="panel-desc">Any OpenAI-compatible service works: a cloud API, or a local model (Ollama, LM Studio). Paste a configuration, fill in the basic fields, or both. Noulette tries the pasted configuration first, then the basic fields.</p>
+          <p className="panel-desc">Works with OpenAI-compatible services (Grafilab, OpenRouter, Groq, Ollama, LM Studio and more), Anthropic (Claude or any Anthropic-compatible host), Google Gemini and Azure OpenAI. Paste a configuration, fill in the basic fields, or both. Noulette tries the pasted configuration first, then the basic fields.</p>
           <div className="field">
             <label htmlFor="ai-config">Paste configuration (optional)</label>
             <textarea id="ai-config" value={ai.configText} onChange={(e) => setAi({ ...ai, configText: e.target.value })} placeholder={'from openai import OpenAI\nclient = OpenAI(api_key="...", base_url="https://.../v1")\nresponse = client.chat.completions.create(model="...", temperature=1)'} />
-            <span className="hint">Python, JavaScript, JSON, YAML, .env or curl. Keys found in it are moved to encrypted storage and removed from the text.</span>
+            <span className="hint">Python, JavaScript, JSON, YAML, .env or curl, for any of the API types below. Keys found in it are moved to encrypted storage and removed from the text.</span>
+          </div>
+          <div className="field">
+            <label htmlFor="ai-dialect">API type</label>
+            <select id="ai-dialect" className="input" value={ai.dialect} onChange={(e) => setAi({ ...ai, dialect: e.target.value })}>
+              <option value="auto">Detect from the base URL</option>
+              <option value="openai">OpenAI-compatible (/v1/chat/completions)</option>
+              <option value="anthropic">Anthropic Messages (/v1/messages)</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="azure">Azure OpenAI</option>
+            </select>
           </div>
           <div className="field">
             <label htmlFor="ai-base">Base URL</label>

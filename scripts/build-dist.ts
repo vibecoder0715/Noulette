@@ -27,7 +27,8 @@ run(['run', path.join(root, 'scripts', 'build-sidecar.ts')], root);
 run(['x', 'tauri', 'build'], desktop);
 const version = JSON.parse(fs.readFileSync(path.join(desktop, 'src-tauri', 'tauri.conf.json'), 'utf8')).version;
 const nsisDir = path.join(desktop, 'src-tauri', 'target', 'release', 'bundle', 'nsis');
-const setup = fs.readdirSync(nsisDir).find((f) => f.endsWith('-setup.exe'));
+// Older installers stay in this folder, so pick the one for this exact version.
+const setup = fs.readdirSync(nsisDir).find((f) => f.endsWith('-setup.exe') && f.includes(`_${version}_`));
 if (!setup) throw new Error('NSIS installer not found');
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 const final = path.join(root, 'dist', `Noulette-Setup-${version}.exe`);

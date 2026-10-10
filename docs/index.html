@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Noulette: find problems in your app before it ships</title>
+  <meta name="description" content="Noulette is a free Windows app and MCP server that inspects your repository for security, business logic, feasibility and legal problems, fixes the ones you approve, and watches your app after launch." />
+  <meta property="og:title" content="Noulette" />
+  <meta property="og:description" content="Problems in your app? Let's find out. Free for Windows." />
+  <meta property="og:image" content="https://vibecoder0715.github.io/Noulette/assets/images/slide-1.jpg" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" href="favicon.ico" />
+  <link rel="preload" href="assets/fonts/AnthropicSerifWebText.ttf" as="font" type="font/ttf" crossorigin />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Apply the saved or system theme before paint, so there is no flash.
+    (function () {
+      var t = localStorage.getItem('nl-theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Noulette home">
+      <img class="wordmark light-only" src="assets/wordmark.svg" alt="Noulette" width="104" height="20" />
+      <img class="wordmark dark-only" src="assets/wordmark-white.svg" alt="Noulette" width="104" height="20" />
+    </a>
+    <nav aria-label="Main">
+      <a href="#features">What it does</a>
+      <a href="#how">How it works</a>
+      <a href="#agents">Agents</a>
+      <a href="https://github.com/vibecoder0715/Noulette" rel="noopener">GitHub</a>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+        <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- Cover: the desktop app's Home page -->
+    <section class="cover" id="top" aria-labelledby="cover-title">
+      <div class="slideshow" aria-hidden="true">
+        <div class="slide-layer active" style="background-image:url(assets/images/slide-1.jpg)"></div>
+        <div class="slide-layer" style="background-image:url(assets/images/slide-2.jpg)"></div>
+        <div class="slide-layer" style="background-image:url(assets/images/slide-3.jpg)"></div>
+        <div class="slide-layer" style="background-image:url(assets/images/slide-4.jpg)"></div>
+        <div class="slide-layer" style="background-image:url(assets/images/slide-5.jpg)"></div>
+        <div class="slide-vignette"></div>
+      </div>
+      <div class="hero">
+        <h1 class="hero-headline" id="cover-title">Problems in your app?<br />Let's find out.</h1>
+        <div class="hero-actions">
+          <a class="btn-clay pill-primary" id="install-btn" href="https://github.com/vibecoder0715/Noulette/releases/latest/download/Noulette-Setup.exe">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            <span>Install .exe</span>
+          </a>
+          <a class="btn-outlined pill-secondary" href="https://github.com/vibecoder0715/Noulette" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>
+            <span>View on GitHub</span>
+          </a>
+        </div>
+        <p class="hero-meta" id="release-meta">Windows 10 and 11 (64-bit). Free and open source.</p>
+      </div>
+    </section>
+
+    <section class="section" id="features" aria-labelledby="features-title">
+      <h2 class="section-heading" id="features-title">What it does</h2>
+      <p class="section-lead">Noulette sits next to your coding agent. It checks the repository your agent has open, explains problems in plain words, and fixes only what you approve.</p>
+      <div class="card-grid">
+        <article class="card">
+          <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <h3>Inspect</h3>
+          <p>Security scanners, then an AI review of business logic, feasibility and legal risks. Every finding cites a real file and line.</p>
+        </article>
+        <article class="card">
+          <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4Z"/></svg>
+          <h3>BUILD</h3>
+          <p>Type BUILD and your agent fixes the approved items. Noulette re-runs the scanners and your tests to confirm each fix.</p>
+        </article>
+        <article class="card">
+          <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <h3>Production watch</h3>
+          <p>Reads PostHog or Google Analytics every 5 to 120 minutes and warns you early. Works with OpenAI-compatible, Anthropic, Gemini and Azure AI.</p>
+        </article>
+        <article class="card">
+          <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+          <h3>Download guard</h3>
+          <p>Watches your Downloads and project folders. Suspicious files go to quarantine, and you decide what happens next.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="how" aria-labelledby="how-title">
+      <h2 class="section-heading" id="how-title">How it works</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num" aria-hidden="true">1</span>
+          <div>
+            <h3>Install and connect</h3>
+            <p>Run the installer, open Noulette, then press Connect next to your coding agent in Settings.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">2</span>
+          <div>
+            <h3>Inspect from your agent</h3>
+            <p>Open any repository in your agent and paste the Inspect prompt. Noulette follows the folder your agent has open, and asks which one when several are open.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">3</span>
+          <div>
+            <h3>Approve, then BUILD</h3>
+            <p>Review the plan in Approvals, then type BUILD. With auto-approve on, fixes land on a separate branch and are never merged for you.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="section" id="agents" aria-labelledby="agents-title">
+      <h2 class="section-heading" id="agents-title">Works with your agent</h2>
+      <ul class="agent-list">
+        <li><img src="assets/images/integrations/kiro.png" alt="" width="40" height="40" /><span>Kiro</span></li>
+        <li><img src="assets/images/integrations/claude-code.png" alt="" width="40" height="40" /><span>Claude Code</span></li>
+        <li><img src="assets/images/integrations/codex.png" alt="" width="40" height="40" /><span>Codex</span></li>
+        <li><img src="assets/images/integrations/antigravity.png" alt="" width="40" height="40" /><span>Antigravity</span></li>
+        <li><img src="assets/images/integrations/opencode.png" alt="" width="40" height="40" /><span>OpenCode</span></li>
+        <li><img src="assets/images/integrations/cline.png" alt="" width="40" height="40" /><span>Cline</span></li>
+      </ul>
+    </section>
+
+    <section class="section cta" aria-labelledby="cta-title">
+      <h2 class="section-heading" id="cta-title">Ready to check your app?</h2>
+      <a class="btn-clay pill-primary" href="https://github.com/vibecoder0715/Noulette/releases/latest/download/Noulette-Setup.exe">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        <span>Install .exe</span>
+      </a>
+      <p class="note">The installer is not code-signed yet. If Windows SmartScreen appears, choose <strong>More info</strong>, then <strong>Run anyway</strong>. All releases are on <a href="https://github.com/vibecoder0715/Noulette/releases" rel="noopener">GitHub Releases</a>.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img class="footer-mark" src="assets/mark.svg" alt="" width="28" height="28" />
+    <p>Noulette. MIT license. <a href="https://github.com/vibecoder0715/Noulette" rel="noopener">Source on GitHub</a>.</p>
+  </footer>
+
+  <script src="site.js" defer></script>
+</body>
+</html>

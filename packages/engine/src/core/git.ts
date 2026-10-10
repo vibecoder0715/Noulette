@@ -86,4 +86,11 @@ export async function lsFiles(dir: string): Promise<string[] | null> {
   return r.stdout.split('\0').filter(Boolean);
 }
 
+/** Top-level folder of the git work tree containing `dir`, or null when it is not inside one. */
+export async function repoRoot(dir: string): Promise<string | null> {
+  const r = await git(dir, ['rev-parse', '--show-toplevel'], 10_000);
+  const top = r.stdout.trim();
+  return r.code === 0 && top ? path.resolve(top) : null;
+}
+
 export { git as rawGit };

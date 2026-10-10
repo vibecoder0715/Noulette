@@ -37,8 +37,9 @@ function connectBlock(ctx?: PromptCtx): string[] {
   ];
 }
 
-function projectLine(ctx?: PromptCtx): string {
-  return ctx?.projectPath ? `projectPath = ${JSON.stringify(ctx.projectPath)} (pass exactly this absolute path to every tool call).` : 'projectPath = the absolute path of the repository open in this workspace (pass it to every tool call).';
+function projectLine(_ctx?: PromptCtx): string {
+  // Never pin a path here: the prompt is pasted into whichever repo the agent has open.
+  return 'projectPath = the absolute path of the repository open in this workspace. Noulette also detects it on its own. If Noulette lists several repositories, ask me which one, then keep passing that path to every tool call.';
 }
 
 export function inspectPrompt(ctx?: PromptCtx): string {

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { kvGet, kvSet } from '../core/db.js';
 import { projectKey } from '../core/paths.js';
-import { registerProject, setProjectState, measureRepo, listRepoFiles, ensureGitignore, EMPTY_REPO_MESSAGE } from '../core/projects.js';
+import { registerProject, setProjectState, measureRepo, listRepoFiles, ensureGitignore, childRepos, EMPTY_REPO_MESSAGE } from '../core/projects.js';
 import { getSettings, effortCaps } from '../core/settings.js';
 import { createRun, getRun, latestRun, updateRun, runJob, type RunRow } from '../core/runs.js';
 import { notify, createApproval, supersedePending, resolveByKind } from '../core/events.js';
@@ -52,6 +52,10 @@ export async function inspectStart(projectPath: string): Promise<ToolResult> {
   if (!fs.existsSync(projectPath)) throw new NouletteError('NOT_FOUND', `Folder not found: ${projectPath}`);
   const size = await measureRepo(projectPath);
   if (size.empty) {
+    const repos = childRepos(projectPath);
+    if (repos.length) {
+      return { ok: false, tldr: `This folder holds ${repos.length} separate repositories, not one app.`, next: 'Ask the user which repository to inspect (each is inspected on its own), then call noulette_inspect with that projectPath.', data: { repositories: repos } };
+    }
     return { ok: false, tldr: EMPTY_REPO_MESSAGE, next: `Tell the user exactly: "${EMPTY_REPO_MESSAGE}" and stop.`, data: { sourceFiles: size.sourceFiles, codeLines: size.codeLines } };
   }
   const project = registerProject(projectPath);

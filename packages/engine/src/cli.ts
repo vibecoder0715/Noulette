@@ -16,7 +16,8 @@ async function main() {
   if (cmd === 'mcp') {
     // stdout is the protocol channel: nothing else may print there.
     console.log = console.error;
-    const server = createMcpServer();
+    // Agents start stdio servers in their workspace folder, so the working directory is a useful hint.
+    const server = createMcpServer({ useCwd: true });
     await server.connect(new StdioServerTransport());
     return;
   }

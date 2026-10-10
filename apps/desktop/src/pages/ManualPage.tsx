@@ -103,9 +103,9 @@ export function ManualPage({ onStartTour }: { onStartTour: () => void }) {
             </Section>
 
             <Section title="Settings, one by one">
-              <Item name="Project">The folder of the app you are building. Add folder picks it. If you have several apps, choose which one Noulette works on.</Item>
+              <Item name="Project">There is nothing to pick. Noulette checks the folder your coding agent has open. If that folder holds several apps, your agent asks you which one.</Item>
               <Item name="Prompts">Inspect mode finds problems. Build mode fixes the ones you approved. Copy Prompt copies it, with everything your agent needs to connect, so just paste it into your agent. Show prompt lets you read it first.</Item>
-              <Item name='Make "BUILD" work in every agent'>Adds a few lines to your project so you can simply type BUILD in any agent.</Item>
+              <Item name='Make "BUILD" work in every agent'>Copies a few lines to paste into your project so you can simply type BUILD in any agent.</Item>
               <Item name="Inspection effort">Standard checks everything once. Extra checks everything up to three times and double-checks each fix. Extra is slower and uses more AI credit.</Item>
               <Item name="Auto-approve">Off: you choose what gets fixed. On: your agent fixes everything it can right after inspecting, on a separate copy of your code (a branch). Nothing is merged for you; you get two commands to merge or throw away the fixes.</Item>
               <Item name="Notification sound">How loud the alert is, from 0% (silent) to 100%. Test sound plays it.</Item>

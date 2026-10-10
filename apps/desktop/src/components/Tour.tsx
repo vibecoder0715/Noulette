@@ -11,7 +11,6 @@ export interface TourStep {
 /** Pointer walkthrough of the important controls. Next / Cancel, Enter or Right arrow = Next, Esc = Cancel. */
 export const TOUR: TourStep[] = [
   { target: 'start-inspection', page: 'home', title: 'Start inspection', text: 'Copies the Inspect prompt. Paste it into your coding agent and answer a few questions.' },
-  { target: 'settings-project', page: 'settings', title: 'Your project', text: 'Pick the app folder you want checked. You can switch between several projects.' },
   { target: 'settings-prompts', page: 'settings', title: 'Prompts', text: 'Inspect finds problems. Build fixes the approved ones. Each has a copy button.' },
   { target: 'settings-agents', page: 'settings', title: 'Connect your agent', text: 'One click adds Noulette to Kiro, Claude Code, Cline, OpenCode, Codex or Antigravity.' },
   { target: 'status-card', page: 'notifications', title: 'Status', text: 'What Noulette is doing now: Ready, Inspecting, or Needs approval.' },

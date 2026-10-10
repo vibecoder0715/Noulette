@@ -86,10 +86,26 @@ const CONFIG_NAMES = /(^|\/)(package(-lock)?\.json|yarn\.lock|pnpm-lock\.yaml|bu
 /** Lists repo files (relative, forward slashes), honouring .gitignore when the folder is a git repo. */
 export async function listRepoFiles(root: string, max = 50_000): Promise<string[]> {
   const fromGit = await lsFiles(root);
-  if (fromGit) return fromGit.map((f) => f.replace(/\\/g, '/')).filter((f) => !f.split('/').some((s) => IGNORED_DIRS.has(s)) && fs.existsSync(path.join(root, f))).slice(0, max);
+  // An empty listing (e.g. the folder is ignored by a parent repo) is not trusted: walk the folder instead.
+  // Entries ending in "/" are nested repositories; they belong to their own project.
+  if (fromGit && fromGit.length) {
+    return fromGit
+      .map((f) => f.replace(/\\/g, '/'))
+      .filter((f) => !f.endsWith('/') && !f.split('/').some((s) => IGNORED_DIRS.has(s)) && fs.existsSync(path.join(root, f)))
+      .slice(0, max);
+  }
   const out: string[] = [];
+  walkFiles(root, (r) => {
+    out.push(r);
+    return out.length < max;
+  });
+  return out;
+}
+
+/** Walks files under root (skipping ignored folders and nested repositories). Stop by returning false. */
+function walkFiles(root: string, visit: (rel: string) => boolean): void {
+  let going = true;
   const walk = (dir: string, rel: string) => {
-    if (out.length >= max) return;
     let entries: fs.Dirent[] = [];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -97,15 +113,28 @@ export async function listRepoFiles(root: string, max = 50_000): Promise<string[
       return;
     }
     for (const e of entries) {
-      if (out.length >= max) return;
+      if (!going) return;
       const r = rel ? `${rel}/${e.name}` : e.name;
       if (e.isDirectory()) {
-        if (!IGNORED_DIRS.has(e.name)) walk(path.join(dir, e.name), r);
-      } else if (e.isFile()) out.push(r);
+        const full = path.join(dir, e.name);
+        if (!IGNORED_DIRS.has(e.name) && !fs.existsSync(path.join(full, '.git'))) walk(full, r);
+      } else if (e.isFile()) going = visit(r);
     }
   };
   walk(root, '');
-  return out;
+}
+
+/** Git repositories directly inside `dir` (one level), e.g. a folder holding several projects. */
+export function childRepos(dir: string): string[] {
+  let entries: fs.Dirent[] = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((e) => e.isDirectory() && !IGNORED_DIRS.has(e.name) && fs.existsSync(path.join(dir, e.name, '.git')))
+    .map((e) => path.join(dir, e.name));
 }
 
 export interface RepoSize {
@@ -118,10 +147,10 @@ export const EMPTY_REPO_MESSAGE = 'Noulette is an MCP that finds problems in exi
 
 /** Empty repo = fewer than 3 source files OR under 100 lines of non-config code. */
 export async function measureRepo(root: string): Promise<RepoSize> {
-  const files = await listRepoFiles(root);
   let sourceFiles = 0;
   let codeLines = 0;
-  for (const f of files) {
+  // Only source files count, and there is no file cap: big asset folders cannot hide the code.
+  for (const f of await listRepoFiles(root, Number.MAX_SAFE_INTEGER)) {
     if (!SOURCE_EXT.has(path.extname(f).toLowerCase()) || CONFIG_NAMES.test(f)) continue;
     sourceFiles++;
     if (codeLines < 100) {

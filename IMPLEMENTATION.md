@@ -2,6 +2,62 @@
 
 What was built for Noulette v1.0.0 (M1 to M6), and how it is tested. Run everything with `bun test`. The installer is built with `bun run build` and written to `dist/Noulette-Setup-1.0.0.exe`.
 
+## v1.0.1: follow the agent's folder, more AI APIs, landing page (done)
+
+Status: implemented. 66 tests pass (new: `tests/routing.test.ts` TC-R-01..09, TC-M5-11..12). Installer: `dist/Noulette-Setup-1.0.1.exe`. Site: `docs/` on GitHub Pages. The build script now copies the installer that matches the version (it used to pick up a stale 1.0.0 file).
+
+**Root cause of "go build one first".** The MCP never looks at the agent's workspace. It inspects only the `projectPath` the agent passes. The copied Inspect prompt pinned the desktop's "active project", which was a leftover test folder (`%TEMP%\nl-kiro-live`, 2 files). So every agent inspected that folder, whichever repo it had open. Two smaller bugs make it worse: `listRepoFiles` treats an empty `git ls-files` result as final, and it applies the 50k-file cap before filtering for source files.
+
+**1. Engine: resolve the repo per call (backend only).**
+- `projectPath` becomes optional on every tool.
+- Each call resolves the folder in this order:
+  1. The agent's workspace folders, read from MCP `roots/list` (when the client supports it).
+  2. The MCP process's working directory (agents start servers in the workspace).
+  3. An explicit `projectPath`, which is accepted only if it is inside one of those folders. If no workspace is known, it is accepted as-is.
+- The repo root is snapped to the nearest `git rev-parse --show-toplevel`.
+- Multiple folders or repos:
+  - Each git repo found in the workspace roots (one level of nesting) is a separate project. Each keeps its own state, run, `PLAN.md`, `VULN.md` and `LOGS.md`, keyed by path as now.
+  - With one candidate, it is used directly.
+  - With several candidates and no `projectPath`, the tool returns the list and asks the agent to choose one. It never guesses.
+- Quarantine between repos:
+  - Scanning a parent folder skips nested repos (any subfolder with its own `.git`).
+  - Noulette files (`PLAN.md`, `VULN.md`, `LOGS.md`, `FUTURE.md`, `.noulette/`) are read and written only at the resolved project root, never inside a nested repo.
+- Empty check fixes:
+  - An empty git listing falls back to walking the folder.
+  - Files are filtered for source code before the cap.
+  - If the folder is empty but contains repos, the tool lists those repos instead of the "go build one first" message.
+- Prompts no longer pin a path. They say that Noulette detects the open folder.
+
+**2. Desktop: simpler frontend.**
+- Remove the Project panel (picker and Add folder) from Settings.
+- Home "Start inspection" always copies the prompt.
+- Projects appear on their own once an agent uses them. The Notifications status follows the most recently used project.
+- "Add to my project" (AGENTS.md) becomes "Copy snippet" only.
+
+**3. Tests, rebuild, install.**
+- Update TC-M2-01. Add tests for roots, cwd fallback, an outside path being redirected, multi-repo choice, nested-repo isolation and the empty-listing fallback.
+- Bump the version to 1.0.1 and run `bun run build`, which writes `dist/Noulette-Setup-1.0.1.exe`.
+- Install it silently and launch it on this PC.
+
+**4. Landing page (GitHub Pages, single page).**
+- Static `docs/index.html` (HTML, CSS, a little JS), served by Pages from `master` `/docs`.
+- The cover is the desktop Home page: the photo slideshow, "Problems in your app? Let's find out." and pill buttons. The primary button becomes **Install .exe**.
+- Below the cover: what it does, how it works (3 steps), supported agents (logos), and a footer with GitHub and license links.
+- Light and dark themes, responsive.
+- The .exe is served from GitHub Releases, not from the Pages repo. The installer is about 96 MB and Pages/git limit files to 100 MB. The button links to `releases/latest/download/Noulette-Setup.exe`, so it always gets the newest version.
+- The README Download link points to the same URL and to the page.
+- Fonts: Anthropic Sans and Anthropic Serif (owner's choice).
+
+**5. Log AI: more API dialects.**
+- Today only OpenAI-compatible `/chat/completions` is supported. That covers Grafilab's OpenAI surface (`https://llm.grafilab.ai/v1`), Ollama, LM Studio, vLLM, OpenRouter, Groq and Gemini's `/openai` endpoint.
+- Add dialects, detected from the pasted config or chosen in the basic fields:
+  - Anthropic Messages (`/v1/messages`, `x-api-key`, `max_tokens`). This covers Claude and Grafilab's Anthropic surface (`https://llm.grafilab.ai`).
+  - Google Gemini native (`generateContent`).
+  - Azure OpenAI (`api-key` header, deployment, `api-version`).
+- Custom headers are picked up from `default_headers` or curl `-H`.
+- Clearer error messages. For Grafilab, 429 `insufficient_quota` is reported as low credits and 403 `billing_currency_unset` as a missing billing country.
+- Not covered: AWS Bedrock SigV4 signing. Bedrock's OpenAI-compatible endpoint works instead.
+
 ## Architecture
 
 | Part | Where | Notes |

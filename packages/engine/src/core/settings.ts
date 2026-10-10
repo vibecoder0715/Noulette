@@ -21,9 +21,11 @@ export const SettingsSchema = z.object({
       baseUrl: z.string().default(''),
       model: z.string().default(''),
       temperature: z.number().min(0).max(2).nullable().default(null),
-      topP: z.number().min(0).max(1).nullable().default(null)
+      topP: z.number().min(0).max(1).nullable().default(null),
+      /** API dialect for the basic fields. "auto" guesses from the base URL. */
+      dialect: z.enum(['auto', 'openai', 'anthropic', 'gemini', 'azure']).default('auto')
     })
-    .default({ configText: '', baseUrl: '', model: '', temperature: null, topP: null }),
+    .default({ configText: '', baseUrl: '', model: '', temperature: null, topP: null, dialect: 'auto' }),
   guard: z.object({ enabled: z.boolean().default(true), extraFolders: z.array(z.string()).default([]) }).default({ enabled: true, extraFolders: [] }),
   remoteMcp: z.object({ enabled: z.boolean().default(false) }).default({ enabled: false }),
   startAtLogin: z.boolean().default(false),

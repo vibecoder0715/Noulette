@@ -153,6 +153,76 @@ describe('M5 AI configuration', () => {
   });
 });
 
+/** Fake server speaking Anthropic, Gemini and Azure dialects; records path and headers. */
+function fakeMultiAi() {
+  const calls: { path: string; headers: Record<string, string>; body: any }[] = [];
+  const s = Bun.serve({
+    port: 0,
+    async fetch(req) {
+      const u = new URL(req.url);
+      const body: any = await req.json();
+      calls.push({ path: u.pathname + u.search, headers: Object.fromEntries(req.headers), body });
+      const ok = '{"ok": true}';
+      if (u.pathname.endsWith('/v1/messages')) return Response.json({ content: [{ type: 'text', text: ok }] });
+      if (u.pathname.includes(':generateContent')) return Response.json({ candidates: [{ content: { parts: [{ text: ok }] } }] });
+      if (u.pathname.includes('/openai/deployments/')) return Response.json({ choices: [{ message: { content: ok } }] });
+      if (u.pathname.endsWith('/quota/chat/completions')) return Response.json({ error: { code: 'insufficient_quota', message: 'Balance too low' } }, { status: 429 });
+      return new Response('not found', { status: 404 });
+    }
+  });
+  servers.push(s);
+  return { url: `http://127.0.0.1:${s.port}`, calls };
+}
+
+describe('M5 AI dialects', () => {
+  beforeEach(() => cleanup.push(tempHome()));
+
+  it('TC-M5-11 Anthropic (Grafilab Anthropic surface), Gemini and Azure configs are detected and called correctly', async () => {
+    const f = fakeMultiAi();
+    // Anthropic SDK example pointed at Grafilab's Anthropic base URL (no /v1).
+    const anth = `import anthropic\nclient = anthropic.Anthropic(api_key="sk-anth-key-1234", base_url="https://llm.grafilab.ai")\nclient.messages.create(model="claude-x", max_tokens=512)`;
+    const pa = parseAiConfigText(anth);
+    expect(pa.config).toMatchObject({ dialect: 'anthropic', baseUrl: 'https://llm.grafilab.ai', model: 'claude-x', maxTokens: 512, apiKey: 'sk-anth-key-1234' });
+    updateSettings({ ai: { configText: anth.replace('https://llm.grafilab.ai', f.url), baseUrl: '', model: '' } });
+    setSecret('aiFileKey', 'sk-anth-key-1234');
+    expect((await testAi()).used).toBe('file');
+    let c = f.calls.at(-1)!;
+    expect(c.path).toBe('/v1/messages');
+    expect(c.headers['x-api-key']).toBe('sk-anth-key-1234');
+    expect(c.headers['anthropic-version']).toBe('2023-06-01');
+    expect(c.body.system).toContain('JSON');
+    expect(c.body.max_tokens).toBe(512);
+
+    // Gemini native via basic fields with the type chosen.
+    updateSettings({ ai: { configText: '', baseUrl: `${f.url}/v1beta`, model: 'gemini-2.5-flash', dialect: 'gemini' } });
+    setSecret('aiApiKey', 'gem-key-777');
+    await testAi();
+    c = f.calls.at(-1)!;
+    expect(c.path).toBe('/v1beta/models/gemini-2.5-flash:generateContent');
+    expect(c.headers['x-goog-api-key']).toBe('gem-key-777');
+    expect(c.body.systemInstruction.parts[0].text).toContain('JSON');
+
+    // Azure OpenAI pasted config.
+    const az = `client = AzureOpenAI(azure_endpoint="${f.url}", api_key="az-key-555", api_version="2024-10-21")\nclient.chat.completions.create(model="my-deploy")`;
+    updateSettings({ ai: { configText: az, baseUrl: '', model: '', dialect: 'auto' } });
+    setSecret('aiFileKey', 'az-key-555');
+    await testAi();
+    c = f.calls.at(-1)!;
+    expect(c.path).toBe('/openai/deployments/my-deploy/chat/completions?api-version=2024-10-21');
+    expect(c.headers['api-key']).toBe('az-key-555');
+
+    // Custom headers from curl are kept; the key header is not duplicated into them.
+    const curl = parseAiConfigText(`curl https://x.example/v1/messages -H "x-api-key: sk-c-111222" -H "anthropic-beta: tools-1" -d '{"model": "claude-y"}'`);
+    expect(curl.config).toMatchObject({ dialect: 'anthropic', baseUrl: 'https://x.example', apiKey: 'sk-c-111222', model: 'claude-y', headers: { 'anthropic-beta': 'tools-1' } });
+  });
+
+  it('TC-M5-12 provider error codes become plain advice', async () => {
+    const f = fakeMultiAi();
+    updateSettings({ ai: { configText: '', baseUrl: `${f.url}/quota`, model: 'm', dialect: 'openai' } });
+    await expect(testAi()).rejects.toThrow(/credit balance is too low/);
+  });
+});
+
 describe('M5 redaction and detectors', () => {
   it('TC-M5-05 sensitive data is redacted before storage or AI', () => {
     const t = redact('user jane.doe@example.com from 203.0.113.7 card 4111 1111 1111 1111 phone +60 12-345 6789 token=abcd1234efgh Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig_sig_sig1 key sk_live_51Hx99999999');
