@@ -33,7 +33,13 @@ Noulette does not just check, detect problems and propose decisions about your c
 - **Cloud Worker**: Optional self-hosted worker to monitor logs when your PC is offline.
 - **Build from Source**: Runs on Bun and Rust (`bun install`, `bun test`, `bun run build`).
 
-## 5. Special thanks and license
+## 5. Sample training script
+
+Sample training script for the agent that **monitor, detect and predict the logs** are as in ([trainings](trainings/) folder), details described in ([trainings/README.md](trainings/README.md)).
+
+**Note**: the data is mock and not actual. For actual fine-tuning, please customize the script and use real data.
+
+## 6. Special thanks and license
 
 Thanks to the projects Noulette builds on: [opengrep](https://github.com/opengrep/opengrep) (LGPL-2.1), [gitleaks](https://github.com/gitleaks/gitleaks) (MIT), [osv-scanner](https://github.com/google/osv-scanner) (Apache-2.0), [askalono](https://github.com/jpeddicord/askalono) (Apache-2.0), [Tauri](https://tauri.app), [Bun](https://bun.sh), the [Model Context Protocol SDK](https://github.com/modelcontextprotocol/typescript-sdk), [OSV.dev](https://osv.dev), the [GitHub Advisory Database](https://github.com/advisories), the [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) and [LogHub](https://github.com/logpai/loghub). The bundled scanners are unmodified upstream binaries under their own licenses.
 
