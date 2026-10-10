@@ -42,3 +42,13 @@ desktop.ini
 tests/temp/
 quarantine/
 .noulette/
+# Downloaded / generated build inputs (fetched by scripts/fetch-scanners.ts and scripts/build-dist.ts)
+apps/desktop/src-tauri/resources/scanners/
+apps/desktop/src-tauri/resources/rules/
+apps/desktop/src-tauri/resources/ui/
+apps/desktop/src-tauri/binaries/
+apps/desktop/src-tauri/gen/
+packages/engine/eval/data/
+# Noulette's own runtime files if this repo is inspected
+VULN.md
+LOGS.md

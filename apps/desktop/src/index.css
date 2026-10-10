@@ -1,9 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap');
-
 @font-face {
   font-family: 'Anthropic Sans';
-  src: url('/fonts/AnthropicSansWebText.ttf') format('truetype'),
-       url('./fonts/AnthropicSansWebText.ttf') format('truetype');
+  src: url('/fonts/AnthropicSansWebText.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -11,8 +8,7 @@
 
 @font-face {
   font-family: 'Anthropic Serif';
-  src: url('/fonts/AnthropicSerifWebText.ttf') format('truetype'),
-       url('./fonts/AnthropicSerifWebText.ttf') format('truetype');
+  src: url('/fonts/AnthropicSerifWebText.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -21,7 +17,7 @@
 :root {
   font-synthesis: weight style;
 
-  /* Anthropic Typography System */
+  /* Anthropic Typography System (original) */
   --font-serif: "Anthropic Serif", "AnthropicSerifWebText", "Copernicus", "Tiempos", Georgia, "Times New Roman", "Source Serif 4", serif;
   --font-sans: "Anthropic Sans", "AnthropicSansWebText", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", Consolas, monospace;
@@ -158,7 +154,7 @@ h1, h2, h3, h4, h5, h6,
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-  user-select: none;
+  user-select: text;
 }
 
 #root {
@@ -1493,7 +1489,7 @@ input[type="checkbox"] {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  user-select: none;
+  user-select: text;
   animation: petunjukBob 2.4s ease-in-out infinite;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1768,7 +1764,7 @@ input[type="checkbox"] {
   gap: 10px;
   padding: 30px 0 10px 0;
   cursor: pointer;
-  user-select: none;
+  user-select: text;
 }
 
 .walkthrough-down-arrow-btn {
@@ -1833,3 +1829,118 @@ input[type="checkbox"] {
     transform: scale(1.18);
   }
 }
+
+/* ==========================================================================
+   Additions for v1 pages, written in the original design language
+   (same tokens, serif 800 headings, 13px body, black/white cards, 1px border-card)
+   ========================================================================== */
+:focus-visible { outline: 2px solid var(--accent-clay); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.section-title { font-size: 19px; color: var(--text-primary); margin: 28px 0 12px 0; }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); font-size: 11.5px; }
+
+.panel { background: var(--bg-surface); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 16px; }
+.panel h4 { font-size: 19px; color: var(--text-primary); margin-bottom: 4px; }
+.panel-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; }
+
+.row-card { background: var(--bg-surface); border: 1px solid var(--border-card); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.row-card strong { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+.row-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+.setting-row:last-child { border-bottom: 0; }
+.setting-row .label { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+.setting-row .desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.field .hint { font-size: 11.5px; color: var(--text-tertiary); }
+.field input[type="text"], .field input[type="password"], .field input[type="url"], .field select, .field textarea, .input {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border-card); border-radius: var(--radius-sm);
+  background-color: var(--bg-app); color: var(--text-primary); font-family: var(--font-sans); font-size: 13px;
+}
+.field textarea { min-height: 110px; font-family: var(--font-mono); font-size: 12px; resize: vertical; }
+select.input { width: auto; }
+input:disabled, select:disabled, textarea:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+.inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.code-line { display: flex; align-items: center; gap: 8px; background: var(--bg-app); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 6px 6px 6px 12px; margin: 6px 0; }
+.code-line code { flex: 1; font-family: var(--font-mono); font-size: 12px; overflow-x: auto; white-space: nowrap; }
+.prompt-box { background: var(--bg-app); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font-mono); font-size: 11.5px; white-space: pre-wrap; max-height: 180px; overflow: auto; margin-top: 8px; user-select: text; }
+
+.alert-box { padding: 12px 18px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; border: 1px solid; }
+.alert-box.ok { background: var(--status-safe-bg); color: var(--status-safe-text); border-color: var(--status-safe-border); }
+.alert-box.error { background: var(--status-critical-bg); color: var(--status-critical-text); border-color: var(--status-critical-border); }
+.alert-box.warn { background: var(--status-warning-bg); color: var(--status-warning-text); border-color: var(--status-warning-border); }
+.alert-box.info { background: var(--status-ai-bg); color: var(--status-ai-text); border-color: var(--status-ai-border); }
+
+.empty-state { background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 36px 20px; text-align: center; font-size: 13px; color: var(--text-secondary); }
+details > summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--text-primary); padding: 4px 0; }
+.details-body { font-size: 13px; color: var(--text-secondary); padding: 6px 0 2px 0; line-height: 1.5; }
+
+.check-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
+.check-row:last-child { border-bottom: 0; }
+.check-row input[type="checkbox"] { width: 16px; height: 16px; margin-top: 3px; }
+
+/* Home: hero over the original 5-image slideshow, then the working cards */
+.home-page-container { position: relative; min-height: 100%; }
+.home-slideshow, .manual-slideshow { position: fixed; top: 0; bottom: 0; right: 0; left: 220px; z-index: 0; pointer-events: none; overflow: hidden; }
+.app-shell.sidebar-collapsed .home-slideshow, .app-shell.sidebar-collapsed .manual-slideshow { left: 68px; }
+.slide-layer { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1), transform 6s cubic-bezier(0.25, 1, 0.5, 1); will-change: opacity, transform; }
+.slide-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, var(--bg-app) 95%); }
+.hero-headline { font-family: var(--font-serif); font-size: 56px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; -webkit-text-stroke: 0.6px currentColor; color: var(--text-primary); margin: 0 0 36px 0; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.06); text-align: center; }
+.hero { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 56px 20px 40px 20px; }
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.pill-primary { padding: 11px 24px !important; font-size: 13.5px !important; font-weight: 800 !important; border-radius: 9999px !important; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.pill-secondary { padding: 10px 22px !important; font-size: 13.5px !important; font-weight: 800 !important; border-radius: 9999px !important; background-color: var(--bg-surface) !important; border: 2px solid var(--border-card) !important; backdrop-filter: blur(8px); }
+.pill-primary:hover, .pill-secondary:hover { transform: translateY(-1px); }
+.home-cards { position: relative; z-index: 2; max-width: 980px; margin: 0 auto; }
+.home-cards .card, .home-cards .action-banner { background-color: color-mix(in srgb, var(--bg-surface) 92%, transparent); backdrop-filter: blur(6px); }
+.home-cards .action-banner { flex-wrap: wrap; gap: 14px; }
+.home-cards .action-banner.waiting { border-left: 4px solid var(--status-warning-border); }
+.home-cards .action-banner.busy { border-left: 4px solid var(--text-primary); }
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card { background-color: var(--bg-surface); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 18px; text-align: center; }
+.stat-card .stat-num { font-family: var(--font-serif); font-size: 34px; -webkit-text-stroke: 0.5px currentColor; }
+.stat-card .stat-lbl { font-size: 13px; font-weight: 700; }
+.stat-card.critical .stat-num { color: var(--status-critical-text); }
+.stat-card.resolved .stat-num { color: var(--status-safe-text); }
+
+/* Manual head page */
+.manual-page-container { position: relative; min-height: calc(100vh - 64px); display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.manual-hero { position: relative; z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+.walkthrough-overlay-container { position: fixed; top: 0; bottom: 0; right: 0; left: 220px; }
+.app-shell.sidebar-collapsed .walkthrough-overlay-container { left: 68px; }
+.guide-section { background: var(--bg-surface); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 24px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06); }
+.guide-section h2 { font-size: 22px; margin-bottom: 10px; color: var(--text-primary); }
+.guide-section p, .guide-section li { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+.guide-section ol, .guide-section ul { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.guide-section p + p { margin-top: 8px; }
+
+/* Settings: integration logo next to agent name */
+.agent-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; flex-shrink: 0; }
+
+/* Pointer tour */
+.tour-back { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 900; }
+.tour-highlight { position: relative; z-index: 901 !important; box-shadow: 0 0 0 3px var(--accent-clay), 0 0 0 7px rgba(128, 128, 128, 0.35) !important; border-radius: var(--radius-sm); }
+.tour-tip { position: fixed; z-index: 902; width: 300px; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 16px 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+.tour-tip .tour-step { font-size: 11.5px; color: var(--text-tertiary); font-weight: 600; margin-bottom: 4px; }
+.tour-tip h3 { font-size: 19px; margin-bottom: 6px; }
+.tour-tip p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; }
+.tour-tip .arrow { position: absolute; left: -8px; top: 20px; width: 14px; height: 14px; background: var(--bg-surface); border-left: 1px solid var(--border-card); border-bottom: 1px solid var(--border-card); transform: rotate(45deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-layer, .integration-carousel-row, .walkthrough-down-arrow-btn, .manual-guide-petunjuk, .nav-badge { animation: none !important; transition: none !important; }
+}
+
+/* Body text about 20% thicker. Anthropic Sans ships only weight 400, so a thin stroke adds weight without faking bold.
+   Headings, nav items and other elements with their own stroke keep their values. */
+body { -webkit-text-stroke: 0.2px currentColor; }
+button, input, select, textarea { -webkit-text-stroke: inherit; }
+code, pre, .prompt-box, .code-line code { -webkit-text-stroke: 0; }
+.home-centered { min-height: calc(100vh - 64px); display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.home-centered .hero { padding: 40px 20px; }
+.roadmap-chip { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; border: 1px solid var(--border-card); background: var(--bg-app); color: var(--text-primary); white-space: nowrap; }

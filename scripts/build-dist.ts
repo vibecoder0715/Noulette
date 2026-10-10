@@ -1,73 +1,35 @@
+/**
+ * Builds the single Windows installer (NSIS, unsigned):
+ *   1. download + verify scanners (pinned SHA-256)
+ *   2. build the UI
+ *   3. copy rule packs and the UI (for "View in Chrome") into Tauri resources
+ *   4. compile the engine sidecar
+ *   5. tauri build  ->  dist/Noulette-Setup-<version>.exe
+ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
-import { buildSidecar } from './build-sidecar.js';
+import { execFileSync } from 'node:child_process';
+import { fetchScanners } from './fetch-scanners.ts';
 
-export function buildAllDownloadables(): boolean {
-  const rootDir = process.cwd();
-  const distDir = path.join(rootDir, 'dist');
-  if (!fs.existsSync(distDir)) {
-    fs.mkdirSync(distDir, { recursive: true });
-  }
+const root = path.resolve(import.meta.dir, '..');
+const desktop = path.join(root, 'apps', 'desktop');
+const res = path.join(desktop, 'src-tauri', 'resources');
+const bun = process.execPath;
+const run = (args: string[], cwd: string) => execFileSync(bun, args, { cwd, stdio: 'inherit' });
 
-  console.log('--- 1. Building engine payload ---');
-  const okEngine = buildSidecar();
-  if (!okEngine) {
-    console.error('Failed to build engine payload.');
-    return false;
-  }
-
-  console.log('\n--- 2. Building frontend production bundle (Vite) ---');
-  const desktopDir = path.join(rootDir, 'apps', 'desktop');
-  execSync('bun run build', { cwd: desktopDir, stdio: 'inherit' });
-
-  console.log('\n--- 3. Compiling unified release executable (Rust/Tauri) ---');
-  const tauriDir = path.join(desktopDir, 'src-tauri');
-  execSync('cargo build --release', { cwd: tauriDir, stdio: 'inherit' });
-
-  const releaseExe = path.join(tauriDir, 'target', 'release', 'noulette-desktop.exe');
-  if (fs.existsSync(releaseExe)) {
-    const mainApp = path.join(distDir, 'noulette.exe');
-    fs.copyFileSync(releaseExe, mainApp);
-
-    // Clean up redundant duplicate desktop binary if present
-    const redundantDesktop = path.join(distDir, 'noulette-desktop.exe');
-    if (fs.existsSync(redundantDesktop)) {
-      try { fs.unlinkSync(redundantDesktop); } catch {}
-    }
-
-    // Ensure strictly ONLY ONE unified executable exists in dist/ (noulette.exe)
-    const sidecarBinary = path.join(distDir, 'noulette-engine.exe');
-    if (fs.existsSync(sidecarBinary)) {
-      try { fs.unlinkSync(sidecarBinary); } catch {}
-    }
-
-    console.log(`\nMain unified downloadable created:\n  - ${mainApp}`);
-  } else {
-    console.warn(`Warning: Release executable not found at ${releaseExe}`);
-  }
-
-  // Copy MSI installer if available
-  const msiDir = path.join(tauriDir, 'target', 'release', 'bundle', 'msi');
-  if (fs.existsSync(msiDir)) {
-    const msiFiles = fs.readdirSync(msiDir).filter(f => f.endsWith('.msi'));
-    if (msiFiles.length > 0) {
-      const latestMsi = path.join(msiDir, msiFiles[0]);
-      const destMsi = path.join(distDir, 'noulette-setup.msi');
-      fs.copyFileSync(latestMsi, destMsi);
-      console.log(`Windows MSI Installer created:\n  - ${destMsi}`);
-    }
-  }
-
-  console.log('\nDownloadables in dist/ folder:');
-  for (const file of fs.readdirSync(distDir)) {
-    const stat = fs.statSync(path.join(distDir, file));
-    console.log(`  - ${file} (${(stat.size / (1024 * 1024)).toFixed(2)} MB)`);
-  }
-  return true;
+await fetchScanners();
+run(['run', 'build'], desktop);
+for (const [src, dst] of [[path.join(root, 'rules'), path.join(res, 'rules')], [path.join(desktop, 'dist'), path.join(res, 'ui')]]) {
+  fs.rmSync(dst, { recursive: true, force: true });
+  fs.cpSync(src, dst, { recursive: true });
 }
-
-if ((import.meta as any).main) {
-  const ok = buildAllDownloadables();
-  if (!ok) process.exit(1);
-}
+run(['run', path.join(root, 'scripts', 'build-sidecar.ts')], root);
+run(['x', 'tauri', 'build'], desktop);
+const version = JSON.parse(fs.readFileSync(path.join(desktop, 'src-tauri', 'tauri.conf.json'), 'utf8')).version;
+const nsisDir = path.join(desktop, 'src-tauri', 'target', 'release', 'bundle', 'nsis');
+const setup = fs.readdirSync(nsisDir).find((f) => f.endsWith('-setup.exe'));
+if (!setup) throw new Error('NSIS installer not found');
+fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
+const final = path.join(root, 'dist', `Noulette-Setup-${version}.exe`);
+fs.copyFileSync(path.join(nsisDir, setup), final);
+console.log(`installer: ${final} (${(fs.statSync(final).size / 1e6).toFixed(1)} MB)`);

@@ -1,0 +1,114 @@
+# Noulette curated SAST rules (MIT).
+rules:
+  - id: nl.py.sql-format
+    languages: [python]
+    severity: ERROR
+    message: SQL query is built with string formatting.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Pass values as query parameters: cursor.execute(sql, (value,))." }
+    pattern-either:
+      - pattern: $C.execute("..." % $X, ...)
+      - pattern: $C.execute("..." + $X, ...)
+      - pattern: $C.execute(f"...", ...)
+      - pattern: $C.execute("...".format(...), ...)
+      - pattern: $C.executemany(f"...", ...)
+      - pattern: text(f"...")
+  - id: nl.py.command-injection
+    languages: [python]
+    severity: ERROR
+    message: A shell command is run with shell=True or os.system on changeable input.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Use subprocess.run([...]) with a list and shell=False." }
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$F(..., shell=True, ...)
+          - pattern: os.system($X)
+          - pattern: os.popen($X)
+      - pattern-not: os.system("...")
+      - pattern-not: subprocess.$F("...", ..., shell=True, ...)
+  - id: nl.py.eval
+    languages: [python]
+    severity: ERROR
+    message: eval/exec runs code from a variable.
+    metadata: { cwe: 95, label: code-injection, severity: high, fix: "Use ast.literal_eval or json.loads for data." }
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: exec($X)
+      - pattern-not: eval("...")
+      - pattern-not: exec("...")
+  - id: nl.py.pickle-load
+    languages: [python]
+    severity: ERROR
+    message: pickle/yaml loads data in a way that can run code.
+    metadata: { cwe: 502, label: deserialize, severity: critical, fix: "Use json, or yaml.safe_load; never unpickle untrusted data." }
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: yaml.load($X)
+      - pattern: yaml.load($X, Loader=yaml.Loader)
+      - pattern: yaml.unsafe_load(...)
+  - id: nl.py.flask-debug
+    languages: [python]
+    severity: WARNING
+    message: Flask/Django debug mode is on.
+    metadata: { cwe: 489, label: debug, severity: high, fix: "Turn debug off in production (read it from an environment variable)." }
+    pattern-either:
+      - pattern: $APP.run(..., debug=True, ...)
+      - pattern: DEBUG = True
+  - id: nl.py.requests-verify-false
+    languages: [python]
+    severity: ERROR
+    message: HTTPS certificate checks are disabled.
+    metadata: { cwe: 295, label: tls, severity: high, fix: "Remove verify=False." }
+    pattern: requests.$M(..., verify=False, ...)
+  - id: nl.py.weak-hash
+    languages: [python]
+    severity: WARNING
+    message: MD5/SHA1 is used, often for passwords.
+    metadata: { cwe: 916, label: password, severity: high, fix: "Use bcrypt, argon2 or hashlib.scrypt for passwords." }
+    pattern-either:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+  - id: nl.py.path-traversal
+    languages: [python]
+    severity: WARNING
+    message: A file is opened with a path from the request.
+    metadata: { cwe: 22, label: path, severity: high, fix: "Use werkzeug.utils.safe_join or check the resolved path stays inside a folder." }
+    pattern-either:
+      - pattern: open(request.$A.get(...), ...)
+      - pattern: open(os.path.join(..., request.$A.get(...)), ...)
+      - pattern: send_file(request.$A.get(...), ...)
+  - id: nl.py.ssrf
+    languages: [python]
+    severity: WARNING
+    message: The server requests a URL taken from the request.
+    metadata: { cwe: 918, label: ssrf, severity: high, fix: "Validate the host against an allow-list." }
+    pattern-either:
+      - pattern: requests.get(request.$A.get(...), ...)
+      - pattern: requests.post(request.$A.get(...), ...)
+      - pattern: urllib.request.urlopen(request.$A.get(...), ...)
+  - id: nl.py.jwt-no-verify
+    languages: [python]
+    severity: ERROR
+    message: Token signature checking is turned off.
+    metadata: { cwe: 347, label: jwt, severity: critical, fix: "Always verify the signature and pass algorithms=[...]." }
+    pattern-either:
+      - pattern: 'jwt.decode(..., options={..., "verify_signature": False, ...}, ...)'
+      - pattern: jwt.decode(..., verify=False, ...)
+  - id: nl.py.random-token
+    languages: [python]
+    severity: WARNING
+    message: random module is used for something security-related.
+    metadata: { cwe: 338, label: crypto, severity: medium, fix: "Use the secrets module." }
+    patterns:
+      - pattern: $V = random.$F(...)
+      - metavariable-regex:
+          metavariable: $V
+          regex: (?i).*(token|secret|password|otp|nonce|key).*
+  - id: nl.py.xss-markup
+    languages: [python]
+    severity: WARNING
+    message: User input is marked as safe HTML.
+    metadata: { cwe: 79, label: xss, severity: high, fix: "Do not wrap user input in Markup()/mark_safe()." }
+    pattern-either:
+      - pattern: Markup(request.$A.get(...))
+      - pattern: mark_safe($X)

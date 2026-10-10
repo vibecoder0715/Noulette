@@ -7,8 +7,8 @@
     "noulette-engine": "src/cli/index.ts"
   },
   "dependencies": {
-    "zod": "^3.23.8",
-    "yaml": "^2.6.1"
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",

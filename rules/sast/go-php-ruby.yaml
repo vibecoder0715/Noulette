@@ -1,0 +1,125 @@
+# Noulette curated SAST rules (MIT): Go, PHP, Ruby, Rust.
+rules:
+  - id: nl.go.sql-concat
+    languages: [go]
+    severity: ERROR
+    message: SQL query is built with string joining or Sprintf.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use db.Query(sql, args...) with placeholders." }
+    pattern-either:
+      - pattern: $DB.Query("..." + $X, ...)
+      - pattern: $DB.Exec("..." + $X, ...)
+      - pattern: $DB.QueryRow("..." + $X, ...)
+      - pattern: $DB.Query(fmt.Sprintf(...), ...)
+      - pattern: $DB.Exec(fmt.Sprintf(...), ...)
+      - pattern: $DB.QueryRow(fmt.Sprintf(...), ...)
+  - id: nl.go.command-injection
+    languages: [go]
+    severity: ERROR
+    message: A shell is invoked with a built command string.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Call exec.Command(program, args...) without a shell." }
+    pattern-either:
+      - pattern: exec.Command("sh", "-c", $X)
+      - pattern: exec.Command("bash", "-c", $X)
+      - pattern: exec.Command("cmd", "/C", $X)
+  - id: nl.go.tls-skip
+    languages: [go]
+    severity: ERROR
+    message: TLS certificate verification is disabled.
+    metadata: { cwe: 295, label: tls, severity: high, fix: "Remove InsecureSkipVerify: true." }
+    pattern: 'tls.Config{..., InsecureSkipVerify: true, ...}'
+  - id: nl.go.weak-hash
+    languages: [go]
+    severity: WARNING
+    message: MD5/SHA-1 is used.
+    metadata: { cwe: 327, label: crypto, severity: medium, fix: "Use sha256, and bcrypt for passwords." }
+    pattern-either:
+      - pattern: md5.New()
+      - pattern: md5.Sum(...)
+      - pattern: sha1.New()
+      - pattern: sha1.Sum(...)
+  - id: nl.php.sql-concat
+    languages: [php]
+    severity: ERROR
+    message: SQL query includes request variables directly.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use PDO prepared statements." }
+    pattern-either:
+      - pattern: mysqli_query($C, "..." . $X . "...")
+      - pattern: mysqli_query($C, "..." . $X)
+      - pattern: $DB->query("..." . $X . "...")
+      - pattern: $DB->query("..." . $X)
+  - id: nl.php.command-injection
+    languages: [php]
+    severity: ERROR
+    message: A system command uses a variable.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Use escapeshellarg and a fixed command, or avoid the shell." }
+    pattern-either:
+      - pattern: system("..." . $X)
+      - pattern: exec("..." . $X, ...)
+      - pattern: shell_exec("..." . $X)
+      - pattern: passthru("..." . $X)
+      - pattern: system($_GET[...])
+  - id: nl.php.include
+    languages: [php]
+    severity: ERROR
+    message: A file is included using request data.
+    metadata: { cwe: 98, label: path, severity: critical, fix: "Map allowed names to fixed file paths." }
+    pattern-either:
+      - pattern: include($_GET[...]);
+      - pattern: require($_GET[...]);
+      - pattern: include_once($_GET[...]);
+  - id: nl.php.unserialize
+    languages: [php]
+    severity: ERROR
+    message: unserialize() on input can run code.
+    metadata: { cwe: 502, label: deserialize, severity: critical, fix: "Use json_decode." }
+    pattern-either:
+      - pattern: unserialize($_GET[...])
+      - pattern: unserialize($_POST[...])
+      - pattern: unserialize($_COOKIE[...])
+  - id: nl.php.xss-echo
+    languages: [php]
+    severity: WARNING
+    message: Request data is printed into the page without escaping.
+    metadata: { cwe: 79, label: xss, severity: high, fix: "Wrap output in htmlspecialchars()." }
+    pattern-either:
+      - pattern: echo $_GET[...];
+      - pattern: echo $_POST[...];
+  - id: nl.rb.sql-interp
+    languages: [ruby]
+    severity: ERROR
+    message: SQL is built with string interpolation.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use where(name: value) or placeholders." }
+    pattern-either:
+      - pattern: $M.where("...#{$X}...")
+      - pattern: $M.find_by_sql("...#{$X}...")
+      - pattern: $C.execute("...#{$X}...")
+  - id: nl.rb.command-injection
+    languages: [ruby]
+    severity: ERROR
+    message: A shell command uses interpolation.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Use system(program, arg1, arg2) form." }
+    pattern-either:
+      - pattern: system("...#{$X}...")
+      - pattern: exec("...#{$X}...")
+  - id: nl.rb.unsafe-load
+    languages: [ruby]
+    severity: ERROR
+    message: Marshal/YAML.load on input can run code.
+    metadata: { cwe: 502, label: deserialize, severity: critical, fix: "Use YAML.safe_load or JSON.parse." }
+    pattern-either:
+      - pattern: Marshal.load(...)
+      - pattern: YAML.load(...)
+  - id: nl.rs.sql-format
+    languages: [rust]
+    severity: ERROR
+    message: SQL query is built with format!.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use bind parameters (query!(..., value) or .bind())." }
+    pattern-either:
+      - pattern: sqlx::query(&format!(...))
+      - pattern: $C.execute(&format!(...), ...)
+  - id: nl.rs.tls-danger
+    languages: [rust]
+    severity: ERROR
+    message: Invalid certificates are accepted.
+    metadata: { cwe: 295, label: tls, severity: high, fix: "Remove danger_accept_invalid_certs(true)." }
+    pattern: $B.danger_accept_invalid_certs(true)

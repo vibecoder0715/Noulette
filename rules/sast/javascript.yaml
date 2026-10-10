@@ -1,0 +1,181 @@
+# Noulette curated SAST rules (MIT). Written for Noulette, not copied from the Semgrep registry.
+# Metadata: cwe (number), label (taxonomy id), severity (critical|high|medium|low), fix (plain hint).
+rules:
+  - id: nl.js.sql-concat
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: SQL query is built by joining user input into the string.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use parameterised queries (placeholders) instead of joining strings." }
+    patterns:
+      - pattern-either:
+          - pattern: $DB.$Q("..." + $X + ...)
+          - pattern: $DB.$Q(`...${$X}...`)
+          - pattern: $DB.$Q("..." + $X)
+      - metavariable-regex:
+          metavariable: $Q
+          regex: ^(query|execute|exec|raw|run|all|get|prepare|unsafe|\$queryRawUnsafe|\$executeRawUnsafe)$
+  - id: nl.js.command-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: A shell command is built from changeable input.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Use execFile/spawn with an argument array and validate the input against an allow-list." }
+    patterns:
+      - pattern-either:
+          - pattern: $CP.exec("..." + $X, ...)
+          - pattern: $CP.exec(`...${$X}...`, ...)
+          - pattern: exec("..." + $X, ...)
+          - pattern: exec(`...${$X}...`, ...)
+          - pattern: $CP.execSync("..." + $X, ...)
+          - pattern: execSync("..." + $X, ...)
+          - pattern: execSync(`...${$X}...`, ...)
+  - id: nl.js.eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Code is run from a string that may contain user input.
+    metadata: { cwe: 95, label: code-injection, severity: high, fix: "Remove eval/new Function; parse data with JSON.parse or a safe parser." }
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: new Function(...)
+      - pattern-not: eval("...")
+  - id: nl.js.xss-innerhtml
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: HTML is inserted from a variable without escaping.
+    metadata: { cwe: 79, label: xss, severity: high, fix: "Use textContent, or sanitise with a trusted HTML sanitiser." }
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = $X
+          - pattern: $EL.outerHTML = $X
+          - pattern: document.write($X)
+      - pattern-not: $EL.innerHTML = "..."
+  - id: nl.js.react-dangerous-html
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: dangerouslySetInnerHTML is used with a variable.
+    metadata: { cwe: 79, label: xss, severity: medium, fix: "Sanitise the HTML before rendering, or render plain text." }
+    pattern: '<$T dangerouslySetInnerHTML={{__html: $X}} />'
+  - id: nl.js.path-traversal
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A file path is built from request data.
+    metadata: { cwe: 22, label: path, severity: high, fix: "Resolve the path and check it stays inside an allowed folder; reject '..'." }
+    pattern-either:
+      - pattern: $FS.readFile($REQ.$P.$X, ...)
+      - pattern: $FS.readFileSync($REQ.$P.$X, ...)
+      - pattern: $FS.createReadStream($REQ.$P.$X, ...)
+      - pattern: $RES.sendFile($REQ.$P.$X, ...)
+      - pattern: path.join(..., $REQ.$P.$X, ...)
+  - id: nl.js.open-redirect
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Redirect target comes straight from the request.
+    metadata: { cwe: 601, label: redirect, severity: medium, fix: "Only redirect to relative paths or an allow-list of domains." }
+    pattern-either:
+      - pattern: $RES.redirect($REQ.query.$X)
+      - pattern: $RES.redirect($REQ.body.$X)
+      - pattern: $RES.redirect($REQ.params.$X)
+  - id: nl.js.ssrf
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: The server fetches a URL taken from the request.
+    metadata: { cwe: 918, label: ssrf, severity: high, fix: "Validate the host against an allow-list and block private IP ranges." }
+    pattern-either:
+      - pattern: fetch($REQ.query.$X, ...)
+      - pattern: fetch($REQ.body.$X, ...)
+      - pattern: axios.get($REQ.query.$X, ...)
+      - pattern: axios.get($REQ.body.$X, ...)
+      - pattern: axios($REQ.body.$X)
+  - id: nl.js.jwt-none
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Token checks accept the 'none' algorithm or skip verification.
+    metadata: { cwe: 347, label: jwt, severity: critical, fix: "Always call jwt.verify with an explicit algorithms list." }
+    pattern-either:
+      - pattern: 'jwt.verify($T, $K, {..., algorithms: [..., "none", ...], ...})'
+      - pattern: jwt.decode($T)
+  - id: nl.js.weak-hash-password
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A fast hash (MD5/SHA1) is used, often for passwords.
+    metadata: { cwe: 916, label: password, severity: high, fix: "Use bcrypt, scrypt or argon2 for passwords." }
+    pattern-either:
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+  - id: nl.js.insecure-random-token
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Math.random is used to create something that looks like a token or ID.
+    metadata: { cwe: 338, label: crypto, severity: medium, fix: "Use crypto.randomBytes or crypto.randomUUID." }
+    patterns:
+      - pattern: $V = <... Math.random() ...>
+      - metavariable-regex:
+          metavariable: $V
+          regex: (?i).*(token|secret|password|otp|nonce|session|key).*
+  - id: nl.js.tls-disabled
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Certificate checks are turned off.
+    metadata: { cwe: 295, label: tls, severity: high, fix: "Remove rejectUnauthorized: false and NODE_TLS_REJECT_UNAUTHORIZED=0." }
+    pattern-either:
+      - pattern: "{..., rejectUnauthorized: false, ...}"
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+  - id: nl.js.cors-any-credentials
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: CORS allows any origin.
+    metadata: { cwe: 942, label: cors, severity: medium, fix: "List the exact origins that may call your API." }
+    pattern-either:
+      - pattern: 'cors({..., origin: "*", ...})'
+      - pattern: 'cors({..., origin: true, credentials: true, ...})'
+      - pattern: $RES.setHeader("Access-Control-Allow-Origin", "*")
+  - id: nl.js.express-no-helmet-debug
+    languages: [javascript, typescript]
+    severity: INFO
+    message: Error stack traces are sent to the client.
+    metadata: { cwe: 209, label: exposure, severity: low, fix: "Send a generic error message and log details on the server." }
+    pattern-either:
+      - pattern: $RES.send($ERR.stack)
+      - pattern: '$RES.json({..., stack: $ERR.stack, ...})'
+  - id: nl.js.prototype-merge
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Request data is merged straight into an object.
+    metadata: { cwe: 1321, label: proto, severity: medium, fix: "Copy only known fields; never merge raw request bodies." }
+    pattern-either:
+      - pattern: Object.assign($O, $REQ.body)
+      - pattern: _.merge($O, $REQ.body)
+      - pattern: _.defaultsDeep($O, $REQ.body)
+  - id: nl.js.mass-assignment
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A database record is created or updated from the whole request body.
+    metadata: { cwe: 915, label: access, severity: medium, fix: "Pick allowed fields explicitly before saving." }
+    pattern-either:
+      - pattern: $M.create($REQ.body)
+      - pattern: $M.update($REQ.body, ...)
+      - pattern: $M.findByIdAndUpdate($ID, $REQ.body, ...)
+  - id: nl.js.unsafe-deserialize
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Untrusted data is deserialised with a library that can run code.
+    metadata: { cwe: 502, label: deserialize, severity: critical, fix: "Use JSON.parse; never node-serialize or yaml.load on untrusted input." }
+    pattern-either:
+      - pattern: serialize.unserialize(...)
+      - pattern: yaml.load($X)
+  - id: nl.js.redos
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A regular expression is built from user input.
+    metadata: { cwe: 1333, label: regex, severity: medium, fix: "Escape user input or use a fixed pattern." }
+    pattern-either:
+      - pattern: new RegExp($REQ.query.$X)
+      - pattern: new RegExp($REQ.body.$X)
+  - id: nl.js.cookie-insecure
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: A session cookie is set without httpOnly or secure flags.
+    metadata: { cwe: 614, label: session, severity: medium, fix: "Set httpOnly: true, secure: true and sameSite on session cookies." }
+    pattern-either:
+      - pattern: '$RES.cookie($N, $V, {..., httpOnly: false, ...})'
+      - pattern: 'session({..., cookie: {..., secure: false, ...}, ...})'

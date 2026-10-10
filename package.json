@@ -1,23 +1,23 @@
 {
   "name": "noulette",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
     "test": "bun test",
-    "build": "bun run ./scripts/build-dist.ts",
-    "build:dist": "bun run ./scripts/build-dist.ts",
+    "scanners": "bun run ./scripts/fetch-scanners.ts",
     "build:engine": "bun run ./scripts/build-sidecar.ts",
-    "lock:tests": "bun run ./scripts/lock-tests.ts",
-    "fixtures": "bun run ./scripts/make-fixtures.ts"
+    "build": "bun run ./scripts/build-dist.ts",
+    "eval:logs": "bun run ./packages/engine/eval/run-eval.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^22.7.5",
-    "bun-types": "1.4.2",
-    "typescript": "^5.6.3"
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/bun": "1.3.14",
+    "@types/node": "22.7.5",
+    "typescript": "5.6.3"
   }
 }

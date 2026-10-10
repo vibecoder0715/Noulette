@@ -1,455 +1,131 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  BookOpen, 
-  ArrowDown, 
-  Cpu, 
-  Copy, 
-  ShieldCheck 
-} from 'lucide-react';
-import type { NavPage } from '../components/Sidebar.js';
+import React, { useEffect, useRef, useState } from 'react';
+import { BookOpen, ArrowDown, MousePointerClick } from 'lucide-react';
+import { Slideshow } from '../components/ui.js';
 
-export interface ManualPageProps {
-  onNavigate?: (page: NavPage) => void;
-  onOpenSetupWizard?: () => void;
-}
+const MANUAL_SLIDES = ['/images/manual-1.jpg', '/images/manual-2.jpg', '/images/manual-3.jpg', '/images/manual-4.jpg'];
 
-const MANUAL_BACKGROUND_SLIDES = [
-  '/images/manual-1.jpg',
-  '/images/manual-2.jpg',
-  '/images/manual-3.jpg',
-  '/images/manual-4.jpg'
-];
+/**
+ * Head page keeps the original look: 4-photo slideshow, serif headline, pill button.
+ * The walkthrough itself is words only. Scrolling to the end and holding 1.5 s starts the pointer tour on Home.
+ * "Start tour" button, Enter/Right arrow (Next) and Esc (Cancel) also work.
+ */
+export function ManualPage({ onStartTour }: { onStartTour: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [hold, setHold] = useState<number | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
-interface IntegrationItem {
-  id: string;
-  num: string;
-  name: string;
-  icon: string;
-}
-
-// 8 Official Integration Brands (Cropped & Transparent Background)
-const INTEGRATIONS: IntegrationItem[] = [
-  { id: 'claude-code', num: '01', name: 'Claude Code', icon: '/images/integrations/claude-code.png' },
-  { id: 'codex', num: '02', name: 'Codex', icon: '/images/integrations/codex.png' },
-  { id: 'antigravity', num: '03', name: 'Antigravity', icon: '/images/integrations/antigravity.png' },
-  { id: 'cline', num: '04', name: 'Cline', icon: '/images/integrations/cline.png' },
-  { id: 'kiro', num: '05', name: 'Kiro', icon: '/images/integrations/kiro.png' },
-  { id: 'opencode', num: '06', name: 'OpenCode', icon: '/images/integrations/opencode.png' },
-  { id: 'posthog', num: '07', name: 'PostHog', icon: '/images/integrations/posthog.png' },
-  { id: 'google-analytics', num: '08', name: 'Analytics', icon: '/images/integrations/google-analytics.png' }
-];
-
-export function ManualPage({ onNavigate }: ManualPageProps) {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [showWalkthrough, setShowWalkthrough] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const [isHoldingAtBottom, setIsHoldingAtBottom] = useState(false);
-  const [holdSecondsLeft, setHoldSecondsLeft] = useState(1.5);
-  const walkthroughContainerRef = useRef<HTMLDivElement>(null);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Cycling 4 background manual workspace photos indefinitely (36% alpha)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % MANUAL_BACKGROUND_SLIDES.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, []);
-
-  const cancelHoldTimer = () => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    if (holdIntervalRef.current) {
-      clearInterval(holdIntervalRef.current);
-      holdIntervalRef.current = null;
-    }
-    setIsHoldingAtBottom(false);
-    setHoldSecondsLeft(1.5);
+  const clearHold = () => {
+    if (timer.current) clearTimeout(timer.current);
+    if (tick.current) clearInterval(tick.current);
+    timer.current = tick.current = null;
+    setHold(null);
   };
+  useEffect(() => clearHold, []);
 
   useEffect(() => {
-    return () => {
-      cancelHoldTimer();
-    };
-  }, []);
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
-  const handleOpenWalkthrough = () => {
-    setShowWalkthrough(true);
-    setIsClosing(false);
-  };
-
-  const handleCloseWalkthrough = () => {
-    cancelHoldTimer();
-    setIsClosing(true);
+  function close(then?: () => void) {
+    clearHold();
+    setClosing(true);
     setTimeout(() => {
-      setShowWalkthrough(false);
-      setIsClosing(false);
+      setOpen(false);
+      setClosing(false);
+      then?.();
     }, 320);
-  };
+  }
 
-  // When scrolling to the bottom-most, change back to manual after 1.5 seconds of hold
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  function startTour() {
+    if (open) close(onStartTour);
+    else onStartTour();
+  }
+
+  function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
-    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
-
-    if (isAtBottom && showWalkthrough && !isClosing) {
-      if (!holdTimerRef.current) {
-        setIsHoldingAtBottom(true);
-        setHoldSecondsLeft(1.5);
-        const startTime = Date.now();
-
-        holdIntervalRef.current = setInterval(() => {
-          const elapsed = (Date.now() - startTime) / 1000;
-          const remaining = Math.max(0, parseFloat((1.5 - elapsed).toFixed(1)));
-          setHoldSecondsLeft(remaining);
-        }, 100);
-
-        holdTimerRef.current = setTimeout(() => {
-          cancelHoldTimer();
-          handleCloseWalkthrough();
-        }, 1500);
-      }
-    } else {
-      // User scrolled back up away from bottom, cancel hold
-      if (holdTimerRef.current) {
-        cancelHoldTimer();
-      }
-    }
-  };
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+    if (atBottom && !closing) {
+      if (timer.current) return;
+      const started = Date.now();
+      setHold(1.5);
+      tick.current = setInterval(() => setHold(Math.max(0, 1.5 - (Date.now() - started) / 1000)), 100);
+      timer.current = setTimeout(() => {
+        clearHold();
+        close(onStartTour);
+      }, 1500);
+    } else if (timer.current) clearHold();
+  }
 
   return (
-    <div
-      className="manual-page-container"
-      id="manual-page"
-      style={{
-        position: 'relative',
-        minHeight: 'calc(100vh - 64px)',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '0',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Backmost Layer: 4 Manual / Guidance Slides (Rich Workspace Photography) */}
-      <div
-        className="manual-background-slideshow"
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          overflow: 'hidden'
-        }}
-      >
-        {MANUAL_BACKGROUND_SLIDES.map((slideSrc, idx) => (
-          <div
-            key={slideSrc}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url(${slideSrc})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center center',
-              backgroundRepeat: 'no-repeat',
-              opacity: idx === currentSlide ? 0.36 : 0,
-              transform: idx === currentSlide ? 'scale(1.02)' : 'scale(1.0)',
-              transition: 'opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1), transform 6s cubic-bezier(0.25, 1, 0.5, 1)',
-              willChange: 'opacity, transform'
-            }}
-          />
-        ))}
+    <div className="manual-page-container" id="manual-page">
+      <Slideshow slides={MANUAL_SLIDES} opacity={0.36} className="manual-slideshow" />
 
-        {/* Ambient Vignette Overlay */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(ellipse at center, transparent 35%, var(--bg-app) 92%)',
-            pointerEvents: 'none'
-          }}
-        />
-      </div>
-
-      {/* Default Landing View: "New to us? Let's dive in." */}
-      <div
-        className="manual-hero-content"
-        style={{
-          position: 'relative',
-          zIndex: 2,
-          maxWidth: '860px',
-          margin: '0 auto',
-          width: '100%',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '40px 20px',
-          opacity: showWalkthrough ? 0 : 1,
-          pointerEvents: showWalkthrough ? 'none' : 'auto',
-          transition: 'opacity 0.25s ease'
-        }}
-      >
-        <h1
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '56px',
-            fontWeight: 800,
-            lineHeight: 1.15,
-            letterSpacing: '-0.03em',
-            WebkitTextStroke: '0.6px currentColor',
-            color: 'var(--text-primary)',
-            margin: '0 0 36px 0',
-            textShadow: '0 2px 16px rgba(0, 0, 0, 0.06)'
-          }}
-        >
-          New to us?<br />
+      <div className="manual-hero" style={{ opacity: open ? 0 : 1, pointerEvents: open ? 'none' : 'auto', transition: 'opacity 0.25s ease' }}>
+        <h1 className="hero-headline">
+          New to us?
+          <br />
           Let's dive in.
         </h1>
-
-        <div>
-          <button
-            type="button"
-            className="btn-clay"
-            id="manual-walkthrough-btn"
-            onClick={handleOpenWalkthrough}
-            style={{
-              padding: '11px 26px',
-              fontSize: '13.5px',
-              fontWeight: 800,
-              borderRadius: '9999px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
-              cursor: 'pointer',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-            }}
-          >
+        <div className="hero-actions">
+          <button type="button" className="btn-clay pill-primary" id="manual-walkthrough-btn" onClick={() => setOpen(true)}>
             <BookOpen size={16} />
             <span>Walkthrough</span>
+          </button>
+          <button type="button" className="btn-outlined pill-secondary" id="start-tour" onClick={startTour}>
+            <MousePointerClick size={16} />
+            <span>Start tour</span>
           </button>
         </div>
       </div>
 
-      {/* Interactive Walkthrough View (Hidden by default, smooth transition on click) */}
-      {showWalkthrough && (
-        <div
-          ref={walkthroughContainerRef}
-          className={`walkthrough-overlay-container ${isClosing ? 'closing' : ''}`}
-          id="walkthrough-overlay-page"
-          onScroll={handleScroll}
-        >
-          {/* Ambient Background Image Layer for Walkthrough Page */}
-          <div
-            className="walkthrough-background-layer"
-            aria-hidden="true"
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 0,
-              pointerEvents: 'none',
-              overflow: 'hidden'
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: 'url(/images/manual-1.jpg)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center center',
-                opacity: 0.18,
-                filter: 'blur(2px)'
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'radial-gradient(ellipse at center, transparent 30%, var(--bg-app) 88%)',
-                pointerEvents: 'none'
-              }}
-            />
+      {open && (
+        <div className={`walkthrough-overlay-container ${closing ? 'closing' : ''}`} id="walkthrough-overlay-page" onScroll={onScroll} role="dialog" aria-label="Noulette guide">
+          <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/images/manual-1.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.18, filter: 'blur(2px)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, var(--bg-app) 88%)' }} />
           </div>
 
-          {/* Main Walkthrough Scrollable Content (No extra top bar or clutter) */}
-          <div className="walkthrough-content-wrapper" style={{ position: 'relative', zIndex: 2 }}>
-            {/* Section 1: Title & Lead */}
-            <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto' }}>
-              <h1
-                style={{
-                  fontFamily: 'var(--font-serif)',
-                  fontSize: '48px',
-                  fontWeight: 800,
-                  lineHeight: 1.15,
-                  letterSpacing: '-0.03em',
-                  WebkitTextStroke: '0.6px currentColor',
-                  color: 'var(--text-primary)',
-                  margin: '0 0 20px 0'
-                }}
-              >
-                It's time to build real products.
-              </h1>
-
-              <p
-                style={{
-                  fontSize: '18px',
-                  lineHeight: 1.6,
-                  color: 'var(--text-secondary)',
-                  fontWeight: 500,
-                  margin: '0'
-                }}
-              >
-                Before shipping, plug Noulette in to find underlying problems in your software before catastrophe ever happens!
+          <div className="walkthrough-content-wrapper" style={{ position: 'relative', zIndex: 2, gap: 24 }}>
+            <div style={{ textAlign: 'center', maxWidth: 820, margin: '0 auto 16px auto' }}>
+              <h1 className="hero-headline" style={{ fontSize: 48, margin: '0 0 20px 0' }}>It's time to build real products.</h1>
+              <p style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                Before shipping, plug Noulette in to find underlying problems in your software before catastrophe ever happens.
               </p>
             </div>
 
-            {/* Section 2: Integration Banner Carousel */}
-            <div>
-              <div style={{ marginBottom: '16px' }}>
-                <h2
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontSize: '28px',
-                    fontWeight: 800,
-                    WebkitTextStroke: '0.4px currentColor',
-                    color: 'var(--text-primary)',
-                    margin: '0 0 6px 0'
-                  }}
-                >
-                  Super large scale, flexible integration
-                </h2>
-                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: 600, margin: 0 }}>
-                  Integrated with:
-                </p>
-              </div>
+            <Section title="What Noulette does">
+              <p>Noulette checks your app for problems before you release it, helps your coding agent fix the ones you approve, and warns you early when something goes wrong after launch.</p>
+            </Section>
 
-              {/* Infinite Left-to-Right Marquee Carousel of Real Brand Icons */}
-              <div className="integration-carousel-wrapper">
-                <div className="integration-carousel-row" id="integration-carousel-row">
-                  {/* Duplicated for seamless infinite loop */}
-                  {[...INTEGRATIONS, ...INTEGRATIONS].map((item, idx) => (
-                    <div key={`${item.id}-${idx}`} className="integration-square-card">
-                      <span className="integration-card-num">{item.num}</span>
-                      <img src={item.icon} alt={item.name} className="integration-card-logo" />
-                      <span className="integration-card-name">{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <Section title="Settings, one by one">
+              <Item name="Project">The folder of the app you are building. Add folder picks it. If you have several apps, choose which one Noulette works on.</Item>
+              <Item name="Prompts">Inspect mode finds problems. Build mode fixes the ones you approved. Copy Prompt copies it, with everything your agent needs to connect, so just paste it into your agent. Show prompt lets you read it first.</Item>
+              <Item name='Make "BUILD" work in every agent'>Adds a few lines to your project so you can simply type BUILD in any agent.</Item>
+              <Item name="Inspection effort">Standard checks everything once. Extra checks everything up to three times and double-checks each fix. Extra is slower and uses more AI credit.</Item>
+              <Item name="Auto-approve">Off: you choose what gets fixed. On: your agent fixes everything it can right after inspecting, on a separate copy of your code (a branch). Nothing is merged for you; you get two commands to merge or throw away the fixes.</Item>
+              <Item name="Notification sound">How loud the alert is, from 0% (silent) to 100%. Test sound plays it.</Item>
+              <Item name="Connect your coding agent">One click adds Noulette to Kiro, Claude Code, Cline, OpenCode, Codex or Antigravity. Your old settings are saved first. Restart the agent afterwards.</Item>
+              <Item name="Production analysis">On: Noulette looks at how your live app is doing and warns you early. Inspect after sets how often (every 5 to 120 minutes).</Item>
+              <Item name="Inspector API">Where the live data comes from. PostHog shows errors and activity; Google Analytics shows visitor numbers. Paste the IDs and keys from those services.</Item>
+              <Item name="AI for log analysis">The AI that explains the warnings. Paste your provider's example code, or fill in the address, model and key. Test connection checks it; Check production now runs a check right away.</Item>
+              <Item name="Download guard">Checks new downloads and files. Anything suspicious is locked away until you decide. Add more folders to watch below it.</Item>
+              <Item name="Start when I sign in">Keeps Noulette running in the background after you turn on your PC.</Item>
+              <Item name="Remote MCP">Lets agents connect over a private web address. Leave it off unless you need it.</Item>
+              <Item name="View in Chrome">Gives you a private link to open this app in your browser.</Item>
+            </Section>
 
-              <div style={{ marginTop: '12px' }}>
-                <span style={{ fontSize: '13.5px', fontStyle: 'italic', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  And many more upcoming...
-                </span>
-              </div>
-            </div>
-
-            {/* Section 3: Feature 1 - Background MCP & System */}
-            <div className="walkthrough-feature-block" id="feature-mcp-engine">
-              <div className="walkthrough-feature-header">
-                <div className="walkthrough-feature-icon-badge">
-                  <Cpu size={22} />
-                </div>
-                <div>
-                  <h3 className="walkthrough-feature-text">
-                    Whenever you open this desktop app, the MCP and system runs behind, it is that easy.
-                  </h3>
-                </div>
-              </div>
-
-              <div className="walkthrough-feature-media">
-                <img
-                  src="/images/walkthrough-control-mcp.png"
-                  alt="Desktop app sidebar with background MCP engine active highlighted as manual"
-                  style={{ width: '100%', display: 'block' }}
-                />
-              </div>
-            </div>
-
-            {/* Section 4: Feature 2 - Copy Prompts from Settings */}
-            <div className="walkthrough-feature-block" id="feature-settings-prompts">
-              <div className="walkthrough-feature-header">
-                <div className="walkthrough-feature-icon-badge">
-                  <Copy size={22} />
-                </div>
-                <div>
-                  <h3 className="walkthrough-feature-text">
-                    To setup the system, just copy the prompts from the settings
-                  </h3>
-                </div>
-              </div>
-
-              <div className="walkthrough-feature-media">
-                <img
-                  src="/images/walkthrough-control-settings.png"
-                  alt="Settings page with Copy Prompt button highlighted as manual"
-                  style={{ width: '100%', display: 'block' }}
-                />
-              </div>
-            </div>
-
-            {/* Section 5: Feature 3 - Production Decisions */}
-            <div className="walkthrough-feature-block" id="feature-production-decisions">
-              <div className="walkthrough-feature-header">
-                <div className="walkthrough-feature-icon-badge">
-                  <ShieldCheck size={22} />
-                </div>
-                <div>
-                  <h3 className="walkthrough-feature-text">
-                    Beyond pre-shipping, Noulette identifies, predict and make decisions on problems during production
-                  </h3>
-                </div>
-              </div>
-
-              <div className="walkthrough-feature-media">
-                <img
-                  src="/images/walkthrough-control-decisions.png"
-                  alt="Production problem prediction and decision controls highlighted as manual"
-                  style={{ width: '100%', display: 'block' }}
-                />
-              </div>
-            </div>
-
-            {/* Section 6: Bottom Down Arrow (Holds for 3 seconds at bottom before returning) */}
-            <div
-              className={`walkthrough-bottom-arrow-zone ${isHoldingAtBottom ? 'holding' : ''}`}
-              id="walkthrough-exit-zone"
-              onClick={handleCloseWalkthrough}
-              title="Hold at bottom for 1.5s or click to return to manual"
-            >
-              <button
-                type="button"
-                className={`walkthrough-down-arrow-btn ${isHoldingAtBottom ? 'pulse-hold' : ''}`}
-                id="walkthrough-down-arrow-btn"
-                aria-label="Hold at bottom for 1.5 seconds or click to exit walkthrough"
-              >
-                <ArrowDown size={22} />
+            <div className="walkthrough-bottom-arrow-zone" id="walkthrough-exit-zone" onClick={() => close(onStartTour)} title="Stay here 1.5 s, or click, to start the tour">
+              <button type="button" className={`walkthrough-down-arrow-btn ${hold !== null ? 'pulse-hold' : ''}`} aria-label="Start the tour">
+                <ArrowDown size={20} />
               </button>
-              
-              <div
-                style={{
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  color: isHoldingAtBottom ? 'var(--accent-clay)' : 'var(--text-tertiary)',
-                  transition: 'color 0.2s ease',
-                  textAlign: 'center',
-                  minHeight: '20px'
-                }}
-              >
-                {isHoldingAtBottom ? (
-                  <span>Returning to manual in {holdSecondsLeft}s...</span>
-                ) : (
-                  <span>Hold at bottom for 1.5s to return</span>
-                )}
-              </div>
+              <span className="text-tertiary" aria-live="polite">
+                {hold !== null ? `Starting the tour in ${hold.toFixed(1)} s...` : 'Stay here for a moment to start the tour'}
+              </span>
             </div>
           </div>
         </div>
@@ -458,4 +134,19 @@ export function ManualPage({ onNavigate }: ManualPageProps) {
   );
 }
 
-export default ManualPage;
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="guide-section">
+      <h2>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Item({ name, children }: { name: string; children: React.ReactNode }) {
+  return (
+    <p style={{ marginTop: 10 }}>
+      <strong style={{ color: 'var(--text-primary)' }}>{name}.</strong> {children}
+    </p>
+  );
+}

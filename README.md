@@ -1,81 +1,49 @@
 # Noulette
 
-[English](README_en.md) | [简体中文](README_cn.md) | [Bahasa Melayu](README_bm.md)
+Finds problems in your app before it ships, and keeps watching it after launch.
 
-[![Release](https://img.shields.io/badge/release-v0.1.0-blue.svg)](https://github.com/noulette/noulette/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64-brightgreen.svg)](https://github.com/noulette/noulette/releases)
-[![Tests](https://img.shields.io/badge/tests-262%20passing-success.svg)](tests/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+## 1. Download
 
----
+**[Download Noulette for Windows (Noulette-Setup-1.0.0.exe)](https://example.com/noulette/releases/latest/Noulette-Setup-1.0.0.exe)** (placeholder link until the release host is chosen)
 
-## 1. Windows Downloadables & Installation
+One installer for everything: the desktop app, the MCP server your coding agent talks to, and the bundled scanners. Windows 10/11 x64, installs for the current user, no admin rights or extra runtimes needed.
 
-You can download the latest official release packages directly from GitHub Releases or access pre-compiled builds in the local `dist/` folder:
+The installer is not code-signed yet, so Windows SmartScreen will show "Windows protected your PC". Click **More info**, then **Run anyway**. Only do this for a file you downloaded from the official link.
 
-| Package | Format | Size | Description | Download Link |
-| :--- | :--- | :--- | :--- | :--- |
-| **Noulette Standalone** | `.exe` (Portable) | ~104 MB | Self-contained single-file application combining Desktop GUI and CLI. Zero installation required. | [📥 Download `noulette.exe`](https://github.com/noulette/noulette/releases/latest/download/noulette.exe) (`dist/noulette.exe`) |
-| **Noulette Windows Installer** | `.msi` (Installer) | ~40 MB | Standard Windows Installer package with Start Menu shortcuts and automated uninstallation. | [📥 Download `noulette-setup.msi`](https://github.com/noulette/noulette/releases/latest/download/noulette-setup.msi) (`dist/noulette-setup.msi`) |
+## 2. Mission and vision
 
-### Modes of Operation:
-- **Desktop Mode**: Double-click `noulette.exe` (or launch via the Start Menu after installing the `.msi`) to open the graphical desktop application (built with Tauri 2 and the Terra design system).
-- **CLI Mode**: Run `noulette.exe <command>` in your terminal (such as `scan`, `gate`, `clone`, or `mcp`) to use the engine directly from the command line.
-- **Zero External Dependencies**: No external runtimes (Node.js, Bun, or Python) are required on your PC.
+AI coding agents write code quickly, but they rarely check whether it is safe, follows the app's own rules, or can handle its real users. Noulette adds that check. It runs next to the agent you already use and holds it to strict rules: every problem must point at real code, every fix is verified again, and nothing changes without your approval.
 
----
+The goal is to make AI-powered discovery of software problems dependable and simple. Results come as a short TL;DR in plain words, with the technical detail available when you want it.
 
-## 2. Mission and Vision
+## 3. Core functions
 
-Our mission is to help software teams build with confidence by catching issues before code ever reaches production. We focus on three core goals:
+- **Inspect.** Asks a few questions about your app (goals, expected users, data) and saves the answers to `PLAN.md`. It then runs, in order:
+  - Security: leaked keys (gitleaks), known-vulnerable packages (osv-scanner with OSV/GHSA, plus the CISA list of actively exploited flaws), code rules (opengrep), an SBOM, and an optional live test against your app on localhost.
+  - Business logic: your agent role-plays several users against a strict checklist.
+  - Feasibility: user count against your stack, fake or placeholder code, outside connections, pipeline, reliability and monitoring.
+  - Licenses: missing license, conflicting packages, risky assets. This is not legal advice.
 
-1. **Detect Problems Across Your Entire Project**:
-   We find real software issues that standard linters miss. For example:
-   - *Cybersecurity Threats*: Leaked cloud keys and API tokens, unsafe pre-install scripts, command injections, and hidden Unicode tricks (such as zero-width characters or right-to-left bidi overrides).
-   - *Logic & Business Flaws*: Broken access controls, IDOR vulnerabilities, and flawed business operations that risk user privacy.
-   - *Architecture Mismatches*: Projects that are heavily overbuilt with unnecessary costs and microservice complexity, or underbuilt designs that cannot handle your target user traffic and budget.
+  The report goes to `VULN.md`, which is kept out of git. A plain summary appears in Notifications and Approvals.
+- **BUILD.** Type `BUILD` in your agent after approving. It fixes the approved items. Noulette then re-runs the scanner that found each one, runs your tests and checks for new problems. When all three pass, the report is archived and marked all clear. Problems that need a person, such as rotating a key, a stack decision or a license choice, are listed as "Needs you" and are never marked resolved.
+- **Auto-approve (optional).** Inspect and fix in one go, on a separate `noulette/fix-...` branch that is never merged for you. You get copyable merge and discard commands. It will not start while you have uncommitted changes, and it stops at a hard limit of fix rounds.
+- **Download guard.** Watches Downloads, the active project and folders you add. Suspicious files go to quarantine and you decide in Approvals. Releasing something marked dangerous requires typing `allow`. Agents can also call `noulette_safe_clone` instead of `git clone`.
+- **After launch.** Reads PostHog events and errors and Google Analytics 4 numbers every 5 to 120 minutes. Deterministic detectors look for error spikes, new errors, traffic drops or spikes, and growth past your planned user count. Your AI model explains what it finds and drafts a plan, written to `LOGS.md` as early warnings with evidence and a confidence level. Data is redacted first, and these plans are never fixed without your approval.
+- **Plans.** `FUTURE.md` lists what your app needs at your planned user count, then at 10x, 100x and 1000x.
 
-2. **Make Appropriate, Precise Decisions**:
-   Instead of overwhelming you with noisy warnings or vague alerts, Noulette gives you clear, evidence-based choices. You can review neutralized visual code diffs, verify proof checklists, sign off on approved changes with cryptographic Ed25519 keys, or record strict, time-limited risk exceptions with clear ownership.
+Code rules use real syntax trees (AST) for JavaScript/TypeScript, Python, Java, Kotlin, C#, Go, PHP, Ruby and Rust. For other languages, Noulette checks secrets, dependencies and licenses, and your agent does the logic and feasibility review. The curated rule pack is Noulette's own (MIT). It does not include Semgrep registry rules, because their license does not allow redistribution.
 
-3. **Verify and Remediate Before Shipping**:
-   Spotting problems is only half the battle. When desired, Noulette proposes automated candidate patches and targeted fixes. You can review the exact changes, test the fix in isolation, and record bounded decisions—ensuring that verified releases document what was tested and what remains outside the verified scope.
+## 4. Environments
 
----
+- **Coding agents (MCP).** Kiro, Claude Code, Cline, OpenCode, Codex and Antigravity get one-click Connect in Settings. It backs up the agent's config and merges into it, so your other servers are kept. Any other MCP client can run `noulette-engine.exe mcp` over stdio.
+- **Analytics.** PostHog (a personal API key with Query read access) and Google Analytics 4 (a service account).
+- **AI for log analysis.** Any OpenAI-compatible endpoint, including cloud APIs and local models such as Ollama or LM Studio. Paste a config snippet (Python, JS, JSON, `.env` or curl), fill in the base URL, model and key, or both. The pasted config is tried first, then the basic fields.
+- **Local first.** Everything runs on your PC in a hidden background service with a tray icon. You can optionally start it at sign-in. Keys are encrypted for your Windows account with DPAPI. You can open the UI in Chrome at `http://127.0.0.1` with your access code. A token-protected HTTP MCP endpoint exists but is off by default.
+- **Cloud worker (bring your own).** `packages/engine/Dockerfile` runs the same monitoring core on your own server while your PC is off. Every item it creates is signed with Ed25519, and the desktop app rejects anything unsigned or tampered. It never sees your repository.
+- **Build from source.** Requires Bun 1.3, Rust and git. Run `bun install`, then `bun test`, then `bun run build`. The installer is written to `dist/`.
 
-## 3. Core Functions & Environments
+## 5. Special thanks and license
 
-Noulette provides transparent, bounded verification through three core functions:
-1. Isolated Intake Pipeline: Inspects downloaded archives and repositories in quarantine before ingestion.
-2. Pre-Release Verification: Runs 142 TrapCheck rules, secret scanners, multi-language AST analysis, and build checks before shipping code.
-3. Architecture Planning: Dynamically assesses project stacks to flag overbuilt or underbuilt systems to fit your user scale and budget.
+Thanks to the projects Noulette builds on: [opengrep](https://github.com/opengrep/opengrep) (LGPL-2.1), [gitleaks](https://github.com/gitleaks/gitleaks) (MIT), [osv-scanner](https://github.com/google/osv-scanner) (Apache-2.0), [askalono](https://github.com/jpeddicord/askalono) (Apache-2.0), [Tauri](https://tauri.app), [Bun](https://bun.sh), the [Model Context Protocol SDK](https://github.com/modelcontextprotocol/typescript-sdk), [OSV.dev](https://osv.dev), the [GitHub Advisory Database](https://github.com/advisories), the [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) and [LogHub](https://github.com/logpai/loghub). The bundled scanners are unmodified upstream binaries under their own licenses.
 
-*Foundational Tenet: Noulette NEVER claims that code is "safe" or that vulnerabilities are eliminated. Every signed decision and release receipt records verified rule evaluations and explicitly lists the areas that were not checked.*
-
-Environments:
-Runs as an all-in-one desktop app, CLI tool, and MCP server for AI coding assistants using multi-language AST parsers and taint analyzers.
-
----
-
-## 4. Special Thanks
-
-Noulette is made possible thanks to these wonderful open-source projects and their contributors:
-
-- [Tauri](https://github.com/tauri-apps/tauri) — Lightweight, fast, and secure desktop application framework.
-- [Bun](https://github.com/oven-sh/bun) — Incredibly fast JavaScript/TypeScript runtime, bundler, and test runner.
-- [React](https://github.com/facebook/react) — The library for web and native user interfaces.
-- [Vite](https://github.com/vitejs/vite) — Next-generation frontend build tooling.
-- [Lucide](https://github.com/lucide-icons/lucide) — Beautiful and consistent icon toolkit.
-- [Rust](https://github.com/rust-lang/rust) & crates:
-  - `ed25519-dalek` & `curve25519-dalek` by [dalek-cryptography](https://github.com/dalek-cryptography)
-  - `serde` by [serde-rs](https://github.com/serde-rs)
-  - `regex` by the Rust Project Developers
-  - `sha2` by [RustCrypto](https://github.com/RustCrypto)
-- [Gitleaks](https://github.com/gitleaks/gitleaks) — Rules and pattern inspiration for secret detection.
-- [TypeScript](https://github.com/microsoft/TypeScript) by Microsoft.
-
----
-
-## 5. License
-
-This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
+Noulette is released under the [MIT License](LICENSE.md).

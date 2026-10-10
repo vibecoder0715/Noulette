@@ -1,0 +1,97 @@
+# Noulette curated SAST rules (MIT): Java, Kotlin, C#.
+rules:
+  - id: nl.java.sql-concat
+    languages: [java]
+    severity: ERROR
+    message: SQL query is built by joining strings.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use PreparedStatement with ? placeholders." }
+    pattern-either:
+      - pattern: (java.sql.Statement $S).executeQuery("..." + $X)
+      - pattern: (java.sql.Statement $S).execute("..." + $X)
+      - pattern: (java.sql.Statement $S).executeUpdate("..." + $X)
+      - pattern: $S.executeQuery("..." + $X + ...)
+      - pattern: $EM.createQuery("..." + $X + ...)
+      - pattern: $EM.createNativeQuery("..." + $X + ...)
+  - id: nl.java.command-injection
+    languages: [java]
+    severity: ERROR
+    message: A system command is built from a variable.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Use ProcessBuilder with a fixed program and validated arguments." }
+    pattern-either:
+      - pattern: Runtime.getRuntime().exec("..." + $X)
+      - pattern: Runtime.getRuntime().exec($X)
+  - id: nl.java.deserialize
+    languages: [java]
+    severity: ERROR
+    message: Java object deserialisation of input can run code.
+    metadata: { cwe: 502, label: deserialize, severity: critical, fix: "Use JSON with a fixed schema, or an ObjectInputFilter allow-list." }
+    pattern: new ObjectInputStream(...).readObject()
+  - id: nl.java.weak-hash
+    languages: [java]
+    severity: WARNING
+    message: MD5/SHA-1 is used.
+    metadata: { cwe: 327, label: crypto, severity: medium, fix: "Use SHA-256, and bcrypt/argon2 for passwords." }
+    pattern-either:
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA1")
+      - pattern: MessageDigest.getInstance("SHA-1")
+  - id: nl.java.ecb
+    languages: [java]
+    severity: WARNING
+    message: Encryption uses ECB mode or DES.
+    metadata: { cwe: 327, label: crypto, severity: high, fix: "Use AES/GCM/NoPadding." }
+    pattern-either:
+      - pattern: Cipher.getInstance("AES")
+      - pattern: Cipher.getInstance("AES/ECB/PKCS5Padding")
+      - pattern: Cipher.getInstance("DES/...")
+  - id: nl.java.xxe
+    languages: [java]
+    severity: WARNING
+    message: XML parser is created without disabling external entities.
+    metadata: { cwe: 611, label: xxe, severity: high, fix: "Set FEATURE_SECURE_PROCESSING and disallow DOCTYPE declarations." }
+    patterns:
+      - pattern: DocumentBuilderFactory.newInstance()
+      - pattern-not-inside: |
+          $F = DocumentBuilderFactory.newInstance();
+          ...
+          $F.setFeature(...);
+  - id: nl.cs.sql-concat
+    languages: [csharp]
+    severity: ERROR
+    message: SQL command text is built by joining strings.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use SqlParameter / parameterised queries." }
+    pattern-either:
+      - pattern: new SqlCommand("..." + $X, ...)
+      - pattern: new SqlCommand($"...", ...)
+      - pattern: $DB.Database.ExecuteSqlRaw("..." + $X, ...)
+      - pattern: $CTX.$SET.FromSqlRaw("..." + $X, ...)
+  - id: nl.cs.command-injection
+    languages: [csharp]
+    severity: ERROR
+    message: A process is started with a command built from a variable.
+    metadata: { cwe: 78, label: command, severity: critical, fix: "Use a fixed executable and pass validated ArgumentList entries." }
+    pattern-either:
+      - pattern: Process.Start("..." + $X)
+      - pattern: Process.Start($CMD, "..." + $X)
+  - id: nl.cs.binaryformatter
+    languages: [csharp]
+    severity: ERROR
+    message: BinaryFormatter deserialisation can run code.
+    metadata: { cwe: 502, label: deserialize, severity: critical, fix: "Use System.Text.Json." }
+    pattern: new BinaryFormatter().Deserialize(...)
+  - id: nl.cs.tls-bypass
+    languages: [csharp]
+    severity: ERROR
+    message: Certificate validation always returns true.
+    metadata: { cwe: 295, label: tls, severity: high, fix: "Remove the custom certificate callback." }
+    pattern-either:
+      - pattern: ServicePointManager.ServerCertificateValidationCallback = (...) => true;
+      - pattern: $H.ServerCertificateCustomValidationCallback = (...) => true;
+  - id: nl.kt.sql-concat
+    languages: [kotlin]
+    severity: ERROR
+    message: SQL query is built from a template string.
+    metadata: { cwe: 89, label: database, severity: critical, fix: "Use bound parameters." }
+    pattern-either:
+      - pattern: $S.executeQuery("..." + $X)
+      - pattern: $S.rawQuery("..." + $X, ...)
