@@ -1,6 +1,7 @@
 # Noulette
 
 Finds problems in your app before it ships, and keeps watching it after launch.
+Pitch deck: **[Pitch deck](https://canva.link/3hbctynfjxnnnkd)**
 
 ## 1. Download
 
