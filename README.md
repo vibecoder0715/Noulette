@@ -2,6 +2,7 @@
 
 Finds problems in your app before it ships, and keeps watching it after launch.
 Pitch deck: **[Pitch deck](https://canva.link/3hbctynfjxnnnkd)**
+[![M8ven Score](https://m8ven.ai/badge/mcp/vibecoder0715-noulette-7aos4x?v=85ce596a492bcf79c466188ebae9d9ac)](https://m8ven.ai/mcp/vibecoder0715-noulette-7aos4x?s=readme)
 
 ## 1. Download
 
