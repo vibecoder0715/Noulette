@@ -30,6 +30,12 @@ toolRegistrars.push((server, { guarded }) => {
   server.registerTool('noulette_future', {
     title: 'Scale plan (FUTURE.md)',
     description: 'Writes FUTURE.md: what the app needs at the planned user count from PLAN.md, then at 10x, 100x and 1000x.',
-    inputSchema: { projectPath: projectPathSchema }
+    inputSchema: { projectPath: projectPathSchema },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath }) => guarded(() => generateFuture(projectPath)));
 });

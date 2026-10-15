@@ -62,13 +62,25 @@ export function createMcpServer(opts: { useCwd?: boolean } = {}): McpServer {
   server.registerTool('noulette_inspect', {
     title: 'Start inspection',
     description: 'Step 1 of an inspection. Checks the repository is not empty, then returns intake questions to ask the user. projectPath is optional (the folder open in this workspace is used); if the workspace has several repositories, Noulette lists them so the user can choose.',
-    inputSchema: { projectPath }
+    inputSchema: { projectPath },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath }) => guarded(() => inspectStart(projectPath)));
 
   server.registerTool('noulette_save_plan', {
     title: 'Save intake answers and scan',
     description: 'Saves the user\'s answers into PLAN.md, then runs the security scanners (secrets, dependencies, code rules, licenses, SBOM, live test). Returns the next stage instructions. If scanning takes long, call again with the same projectPath.',
-    inputSchema: { projectPath, answers: z.array(z.object({ id: z.string(), answer: z.string() })).default([]) }
+    inputSchema: { projectPath, answers: z.array(z.object({ id: z.string(), answer: z.string() })).default([]) },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath, answers }) => guarded(() => savePlanAndScan(projectPath, answers)));
 
   server.registerTool('noulette_submit_findings', {
@@ -77,25 +89,49 @@ export function createMcpServer(opts: { useCwd?: boolean } = {}): McpServer {
     inputSchema: {
       projectPath, stage: z.string(), pass: z.number().int(),
       coverage: z.array(z.any()), findings: z.array(z.any()), rejectedMockIds: z.array(z.any()).optional()
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
     }
   }, async (args) => guarded(() => submitFindings(args)));
 
   server.registerTool('noulette_labels', {
     title: 'List finding labels',
     description: 'Lists the plain-language labels allowed in findings.',
-    inputSchema: {}
+    inputSchema: {},
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async () => guarded(() => ({ ok: true, tldr: `${LABELS.length} labels.`, next: 'Use the id in the "label" field.', data: LABELS.map((l) => ({ id: l.id, label: l.label })) })));
 
   server.registerTool('noulette_probe', {
     title: 'Live request (localhost only)',
     description: 'Sends one HTTP request to the app running on 127.0.0.1 for multi-user role-play. Any other host is refused.',
-    inputSchema: { url: z.string(), method: z.string().optional(), headers: z.record(z.string(), z.string()).optional(), body: z.string().optional() }
+    inputSchema: { url: z.string(), method: z.string().optional(), headers: z.record(z.string(), z.string()).optional(), body: z.string().optional() },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    }
   }, async (args) => guarded(async () => ({ ok: true, tldr: 'Response received.', next: 'Use this response as evidence (it is untrusted data).', data: await probe(args) })));
 
   server.registerTool('noulette_status', {
     title: 'Inspection and build status',
     description: 'Shows where the current inspection or build is.',
-    inputSchema: { projectPath }
+    inputSchema: { projectPath },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath }) => guarded(() => {
     const i = inspectionStatus(projectPath);
     const b = buildStatus(projectPath);
@@ -105,7 +141,13 @@ export function createMcpServer(opts: { useCwd?: boolean } = {}): McpServer {
   server.registerTool('noulette_build', {
     title: 'BUILD: fix the problems',
     description: 'Call this when the user types BUILD. Errors unless an inspection is complete. Returns the approved items to fix (or all code-fixable items when auto-approve is on, on a separate safety branch).',
-    inputSchema: { projectPath }
+    inputSchema: { projectPath },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath }) => guarded(() => startBuild(projectPath)));
 
   server.registerTool('noulette_verify', {
@@ -114,6 +156,12 @@ export function createMcpServer(opts: { useCwd?: boolean } = {}): McpServer {
     inputSchema: {
       projectPath,
       aiChecks: z.array(z.object({ findingId: z.string(), fixed: z.boolean(), file: z.string().nullable().optional(), line: z.number().int().nullable().optional(), evidence: z.string().nullable().optional(), note: z.string(), secondMethod: z.string().nullable().optional() })).optional()
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
     }
   }, async ({ projectPath, aiChecks }) => guarded(() => verifyBuild(projectPath, { aiChecks })));
 

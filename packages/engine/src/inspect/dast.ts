@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import net from 'node:net';
-import { killTree } from '../core/proc.js';
+import { killTree, splitCommand } from '../core/proc.js';
 import { labelById } from './taxonomy.js';
 import type { Finding, ScannerStatus } from './types.js';
 
@@ -16,6 +16,8 @@ export interface StartSpec {
   port: number;
 }
 
+const SHELL_META_RE = /[;&|`$><\r\n]/;
+
 export function parseStartAnswer(answer: string | null): StartSpec | null {
   if (!answer) return null;
   const portM = /(?:port|:)\s*(\d{2,5})\b/i.exec(answer);
@@ -26,6 +28,7 @@ export function parseStartAnswer(answer: string | null): StartSpec | null {
     .replace(/["'`]/g, '')
     .trim();
   if (!command || /^(none|no|skip|n\/a|-)$/i.test(command)) return null;
+  if (SHELL_META_RE.test(command)) return null;
   if (port < 1 || port > 65535) return null;
   return { command, port };
 }
@@ -46,16 +49,32 @@ function portOpen(port: number): Promise<boolean> {
   });
 }
 
+function resolveExecutable(bin: string): string {
+  if (process.platform === 'win32' && /^(npm|npx|pnpm|yarn|corepack)$/i.test(bin)) {
+    return `${bin}.cmd`;
+  }
+  return bin;
+}
+
 export async function startApp(root: string, spec: StartSpec, waitMs = 60_000): Promise<{ ok: boolean; reason?: string; reused?: boolean }> {
   if (await portOpen(spec.port)) {
     // Something already listens there (the user's dev server). Use it, but do not own it.
     return { ok: true, reused: true };
   }
   stopApp(root);
+  if (SHELL_META_RE.test(spec.command)) {
+    return { ok: false, reason: 'Start command contains disallowed shell metacharacters.' };
+  }
+  const argv = splitCommand(spec.command);
+  if (argv.length === 0) {
+    return { ok: false, reason: 'No executable found in start command.' };
+  }
+  const [rawBin, ...args] = argv;
+  const bin = resolveExecutable(rawBin);
   const log: string[] = [];
-  const child = spawn(spec.command, {
+  let spawnErr: Error | null = null;
+  const child = spawn(bin, args, {
     cwd: root,
-    shell: true,
     windowsHide: true,
     env: { ...process.env, PORT: String(spec.port), NODE_ENV: 'development', BROWSER: 'none' },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -64,12 +83,19 @@ export async function startApp(root: string, spec: StartSpec, waitMs = 60_000): 
     log.push(String(d));
     if (log.length > 200) log.shift();
   };
+  child.on('error', (err) => {
+    spawnErr = err;
+    log.push(err.message);
+  });
   child.stdout?.on('data', keep);
   child.stderr?.on('data', keep);
   running.set(root, { child, port: spec.port, startedAt: Date.now(), log });
   const deadline = Date.now() + waitMs;
   while (Date.now() < deadline) {
-    if (child.exitCode !== null) return { ok: false, reason: `The app stopped right away. Last output: ${log.join('').slice(-400)}` };
+    if (spawnErr || child.exitCode !== null) {
+      stopApp(root);
+      return { ok: false, reason: `The app stopped right away. Last output: ${log.join('').slice(-400)}` };
+    }
     if (await portOpen(spec.port)) return { ok: true };
     await new Promise((r) => setTimeout(r, 750));
   }

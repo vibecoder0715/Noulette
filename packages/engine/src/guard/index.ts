@@ -29,6 +29,12 @@ toolRegistrars.push((server, { guarded }) => {
   server.registerTool('noulette_safe_clone', {
     title: 'Clone a repository safely',
     description: 'Use instead of "git clone". Clones into quarantine with hooks/submodules/LFS off, scans for malware, hidden AI instructions and leaked secrets, and only moves it to the destination if it is safe. Otherwise the user decides in the Noulette app.',
-    inputSchema: { url: z.string(), destination: z.string().describe('Absolute folder where the repo should end up') }
+    inputSchema: { url: z.string(), destination: z.string().describe('Absolute folder where the repo should end up') },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true
+    }
   }, async ({ url, destination }) => guarded(() => safeClone(url, destination)));
 });

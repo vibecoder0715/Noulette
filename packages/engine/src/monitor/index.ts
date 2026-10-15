@@ -184,11 +184,23 @@ toolRegistrars.push((server, { guarded }) => {
   server.registerTool('noulette_log_plans', {
     title: 'Approved production fixes',
     description: 'Returns production early-warning plans (from LOGS.md) that the user approved in the app. Unapproved, unsigned or tampered items are never returned.',
-    inputSchema: { projectPath: projectPathSchema }
+    inputSchema: { projectPath: projectPathSchema },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath }) => guarded(() => getApprovedLogPlans(projectPath)));
   server.registerTool('noulette_log_plan_done', {
     title: 'Mark a production fix done',
     description: 'Call after fixing an approved production plan.',
-    inputSchema: { projectPath: projectPathSchema, planId: z.string(), summary: z.string() }
+    inputSchema: { projectPath: projectPathSchema, planId: z.string(), summary: z.string() },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }, async ({ projectPath, planId, summary }) => guarded(() => completeLogPlan(projectPath, planId, summary)));
 });
