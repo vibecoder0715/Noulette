@@ -1,6 +1,6 @@
 [package]
 name = "noulette-desktop"
-version = "1.0.3"
+version = "1.0.4"
 description = "Noulette desktop app"
 authors = ["Noulette"]
 license = "MIT"

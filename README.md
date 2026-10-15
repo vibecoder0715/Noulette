@@ -7,7 +7,7 @@ Pitch deck: **[Pitch deck](https://canva.link/3hbctynfjxnnnkd)**
 ## 1. Download
 
 **[Download Noulette for Windows (latest .exe)](https://github.com/vibecoder0715/Noulette/releases/latest/download/Noulette-Setup.exe)** · [Website](https://vibecoder0715.github.io/Noulette/)  
-*(Always the newest release from [GitHub Releases](https://github.com/vibecoder0715/Noulette/releases/latest) | v1.0.3 SHA-256: `00c1e5c16ed72e3d4f4e4da10176688c97cdbbdffd9524a4afe04f8f101f228d`)*
+*(Always the newest release from [GitHub Releases](https://github.com/vibecoder0715/Noulette/releases/latest) | v1.0.4 SHA-256: `0504efc54f07d6ba57c4163a899b5609152b8fec00669becf91bf5df8c7e3c0e`)*
 
 One installer for everything: the desktop app, the MCP server your coding agent talks to, and the bundled scanners. Windows 10/11 x64, installs for the current user, no admin rights or extra runtimes needed.
 
